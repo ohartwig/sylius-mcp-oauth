@@ -1,0 +1,67 @@
+{
+    "name": "koh/sylius-mcp-oauth",
+    "description": "OAuth 2.1 authorization server for MCP clients on Sylius: dynamic client registration, PKCE, and the RFC 8414 / RFC 9728 discovery metadata.",
+    "type": "sylius-bundle",
+    "license": "MIT",
+    "keywords": ["sylius", "mcp", "oauth2", "oauth21", "pkce", "rfc8414", "rfc9728", "agent"],
+    "authors": [
+        { "name": "Kai Ole Hartwig", "email": "mail@ole-hartwig.eu" }
+    ],
+    "homepage": "https://ole-hartwig.eu/open-source/sylius-agent-ready",
+    "support": {
+        "issues": "https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/-/issues",
+        "source": "https://github.com/ole-hartwig/sylius-mcp-oauth"
+    },
+    "require": {
+        "php": "^8.2",
+        "doctrine/doctrine-bundle": "^2.12",
+        "doctrine/orm": "^3.0",
+        "doctrine/persistence": "^3.0 || ^4.0",
+        "koh/sylius-agent-contracts": "^1.1",
+        "sylius/sylius": "^2.0",
+        "symfony/config": "^7.4 || ^8.0",
+        "symfony/console": "^7.4 || ^8.0",
+        "symfony/dependency-injection": "^7.4 || ^8.0",
+        "symfony/framework-bundle": "^7.4 || ^8.0",
+        "symfony/http-foundation": "^7.4 || ^8.0",
+        "symfony/http-kernel": "^7.4 || ^8.0",
+        "symfony/routing": "^7.4 || ^8.0",
+        "symfony/security-bundle": "^7.4 || ^8.0"
+    },
+    "require-dev": {
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.0",
+        "phpstan/phpstan-doctrine": "^2.0",
+        "phpunit/phpunit": "^11.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Koh\\SyliusMcpOAuth\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Koh\\SyliusMcpOAuth\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0-dev"
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "allow-plugins": {
+            "phpstan/extension-installer": true
+        }
+    },
+    "repositories": [
+        {
+            "type": "composer",
+            "url": "https://git.ole-hartwig.eu/api/v4/group/1091/-/packages/composer/packages.json",
+            "only": ["koh/*"]
+        }
+    ],
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
