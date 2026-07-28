@@ -7,10 +7,11 @@ declare(strict_types=1);
 
 namespace Koh\SyliusMcpOAuth\OAuth;
 
-use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
-use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
 use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
+use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
+use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
+use Psr\Log\LoggerInterface;
 
 /**
  * OAuth 2.1 authorization-server logic for the MCP endpoint: Dynamic Client
@@ -36,6 +37,7 @@ final class OAuthServer
 
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
+        private readonly ?LoggerInterface $logger = null,
     ) {
         $this->clients = $entityManager->getRepository(McpOAuthClient::class);
         $this->codes = $entityManager->getRepository(McpAuthorizationCode::class);
@@ -150,6 +152,24 @@ final class OAuthServer
         )->setParameter('hash', hash('sha256', $rawCode))->execute();
 
         if (1 !== $burned) {
+            // Reaching here means the code was valid a moment ago and is now
+            // spent — someone else redeemed it in between. With PKCE S256
+            // mandatory an intercepted code is useless without the verifier, so
+            // this is far more likely a client retrying than an attack. It is
+            // still the one signal that would distinguish the two, and it was
+            // previously invisible.
+            //
+            // OAuth 2.1 also says a server SHOULD revoke tokens already issued
+            // from a replayed code. That needs a token-to-code link the schema
+            // does not have. If this ever fires in production, that is the
+            // evidence to add it — until then it would be a migration bought on
+            // suspicion.
+            $this->logger?->warning('MCP OAuth: authorization code redeemed twice', [
+                'client_id' => $clientId,
+                // Prefix only: the full hash is the lookup key for a live code.
+                'code_hash_prefix' => substr(hash('sha256', $rawCode), 0, 12),
+            ]);
+
             throw new OAuthException('invalid_grant', 'Authorization code is invalid, expired or already used.');
         }
 
