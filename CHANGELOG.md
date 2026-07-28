@@ -1,3 +1,15 @@
+## [1.1.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.1.0...v1.1.1) (2026-07-28)
+
+### :bug: Fixes
+
+* restrict redirect_uri schemes and burn authorization codes atomically ([10e33fe](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/10e33fe844efc18a2390820e7f4dd302eb8ed595))
+
+### :repeat: Chores
+
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.26.0 ([c205e74](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c205e747e75d7f43fcb03bf369abd20a0f1a77af))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.26.1 ([212bfe2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/212bfe28a3031fbbfa71ac036b2b6009579207b4))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.26.3 ([c2d0061](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c2d0061929eab91113c22f8a0f16891fd6dc68f7))
+
 ## [1.1.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.0.0...v1.1.0) (2026-07-28)
 
 ### :sparkles: Features
