@@ -52,9 +52,10 @@ final class OAuthServer
             throw new OAuthException('invalid_client_metadata', 'At least one redirect_uri is required.');
         }
         foreach ($redirectUris as $uri) {
-            if (!\is_string($uri) || filter_var($uri, \FILTER_VALIDATE_URL) === false) {
+            if (!\is_string($uri)) {
                 throw new OAuthException('invalid_redirect_uri', 'redirect_uri is not a valid URL.');
             }
+            self::assertUsableRedirectUri($uri);
         }
 
         $client = new McpOAuthClient(
@@ -139,10 +140,84 @@ final class OAuthServer
             throw new OAuthException('invalid_client', 'Unknown client.');
         }
 
+        // Burn the code in a single conditional UPDATE rather than
+        // read-then-write. isUsable() above is a read, and two token requests
+        // carrying the same code can both pass it before either writes — which
+        // would mint two access tokens from one authorization. Letting the
+        // database decide the winner closes that window without a lock.
+        $burned = $this->entityManager->createQuery(
+            \sprintf('UPDATE %s c SET c.used = true WHERE c.codeHash = :hash AND c.used = false', McpAuthorizationCode::class),
+        )->setParameter('hash', hash('sha256', $rawCode))->execute();
+
+        if (1 !== $burned) {
+            throw new OAuthException('invalid_grant', 'Authorization code is invalid, expired or already used.');
+        }
+
+        // The UPDATE bypassed the identity map, so the in-memory entity still
+        // says unused. Leaving it that way would let a second consumeCode() in
+        // the same request pass isUsable().
         $code->markUsed();
-        $this->entityManager->flush();
 
         return ['admin_user_id' => $code->getAdminUserId(), 'scopes' => $code->getScopes(), 'client' => $client];
+    }
+
+    /**
+     * OAuth 2.1 §2.3.1 / RFC 8252 §7: a redirect URI is https, http on the
+     * loopback interface, or a private-use scheme.
+     *
+     * FILTER_VALIDATE_URL is not a substitute. It accepts `javascript://x%0a…`,
+     * `file:///etc/passwd` and `ftp://…` — and since registration is open by
+     * design (public clients, no secret), anyone could register a client whose
+     * redirect target is one of those and get it echoed into a Location header.
+     *
+     * A fragment is rejected outright: RFC 6749 §3.1.2 forbids it, and the
+     * authorization response appends its own query, which a fragment would
+     * swallow.
+     */
+    private static function assertUsableRedirectUri(string $uri): void
+    {
+        $parts = parse_url($uri);
+        if ($parts === false || !isset($parts['scheme'])) {
+            throw new OAuthException('invalid_redirect_uri', 'redirect_uri is not a valid URL.');
+        }
+        if (isset($parts['fragment'])) {
+            throw new OAuthException('invalid_redirect_uri', 'redirect_uri must not contain a fragment.');
+        }
+
+        $scheme = strtolower($parts['scheme']);
+        $host = strtolower($parts['host'] ?? '');
+
+        if ($scheme === 'https') {
+            if ($host === '') {
+                throw new OAuthException('invalid_redirect_uri', 'redirect_uri must name a host.');
+            }
+
+            return;
+        }
+
+        if ($scheme === 'http') {
+            // RFC 8252 §7.3: loopback only, and only for native clients.
+            if (\in_array($host, ['127.0.0.1', '::1', '[::1]', 'localhost'], true)) {
+                return;
+            }
+
+            throw new OAuthException(
+                'invalid_redirect_uri',
+                'Plain http is only allowed on the loopback interface; use https.',
+            );
+        }
+
+        // RFC 8252 §7.1: a private-use scheme is a reverse-domain name, so it
+        // always contains a dot. That excludes javascript:, data:, file: and ftp:
+        // without needing to enumerate them.
+        if (str_contains($scheme, '.')) {
+            return;
+        }
+
+        throw new OAuthException(
+            'invalid_redirect_uri',
+            \sprintf('Scheme "%s" is not allowed for a redirect_uri.', $scheme),
+        );
     }
 
     /** PKCE S256 (RFC 7636): base64url(sha256(verifier)) == stored challenge. */
