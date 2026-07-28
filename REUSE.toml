@@ -1,0 +1,27 @@
+version = 1
+SPDX-PackageName = "koh/sylius-mcp-oauth"
+SPDX-PackageSupplier = "Kai Ole Hartwig <mail@ole-hartwig.eu>"
+SPDX-PackageDownloadLocation = "https://github.com/ole-hartwig/sylius-mcp-oauth"
+
+# Config, metadata and repo-template files. They carry no comment syntax that
+# survives their own tooling (composer.json, JSON-like configs), are generated
+# by tooling (CHANGELOG.md, written by semantic-release on every release) or are
+# copied verbatim from devops/repo-templates, where a per-file header would
+# drift from the source on the next sync. Declaring them here keeps
+# `reuse lint` blocking without littering generated files with headers.
+[[annotations]]
+path = [
+    ".gitattributes",
+    ".gitignore",
+    "composer.json",
+    "composer.lock",
+    "phpstan.neon",
+    "phpunit.xml.dist",
+    "CHANGELOG.md",
+    "SECURITY.md",
+    ".well-known/security.txt",
+    ".gitlab/**",
+]
+precedence = "aggregate"
+SPDX-FileCopyrightText = "2026 Kai Ole Hartwig"
+SPDX-License-Identifier = "MIT"
