@@ -1,3 +1,9 @@
+## [1.2.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.1.1...v1.2.0) (2026-07-28)
+
+### :sparkles: Features
+
+* log an authorization code redeemed twice ([081643e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/081643e34f0acc8b7bf07727b37a9f2acef9c85d))
+
 ## [1.1.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.1.0...v1.1.1) (2026-07-28)
 
 ### :bug: Fixes
