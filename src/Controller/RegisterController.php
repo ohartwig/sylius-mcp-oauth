@@ -24,8 +24,9 @@ final class RegisterController extends AbstractController
 {
     public function __invoke(Request $request, OAuthServer $server): JsonResponse
     {
+        $decoded = json_decode($request->getContent(), true);
         /** @var array<string, mixed> $body */
-        $body = json_decode($request->getContent() ?: '{}', true) ?? [];
+        $body = \is_array($decoded) ? $decoded : [];
 
         $redirectUris = $body['redirect_uris'] ?? [];
         if (!\is_array($redirectUris)) {

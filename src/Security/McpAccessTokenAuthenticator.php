@@ -42,12 +42,12 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
 
     public function supports(Request $request): bool
     {
-        return str_starts_with((string) $request->headers->get('Authorization', ''), 'Bearer ');
+        return str_starts_with($request->headers->get('Authorization', ''), 'Bearer ');
     }
 
     public function authenticate(Request $request): Passport
     {
-        $raw = trim(substr((string) $request->headers->get('Authorization', ''), 7));
+        $raw = trim(substr($request->headers->get('Authorization', ''), 7));
 
         $token = $this->tokens->findValid($raw);
         if ($token === null) {
