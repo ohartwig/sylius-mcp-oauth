@@ -1,3 +1,9 @@
+## [1.2.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.2...v1.2.3) (2026-08-01)
+
+### :bug: Fixes
+
+* **phpstan:** record that a requested scope of "0" is dropped, not refused ([f72ab16](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/f72ab16b39c5706089bab96cfdc1504974d78e0e))
+
 ## [1.2.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.1...v1.2.2) (2026-08-01)
 
 ### :bug: Fixes
