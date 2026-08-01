@@ -102,7 +102,27 @@ final class AuthorizeController extends AbstractController
     /** @return list<string>|null null = an unsupported scope was requested */
     private function resolveScopes(string $scope): ?array
     {
-        $requested = array_values(array_filter(explode(' ', trim($scope))));
+        // Two things are dropped here, and only one of them is uncontroversial:
+        // the empty string, which is what repeated spaces between scopes leave
+        // behind, and the literal "0", which the callback-less array_filter()
+        // discarded just as silently. The condition is spelled out so the second
+        // one stops being invisible; it does not change what happens.
+        //
+        // What happens is the part that wants a decision. A dropped scope is not
+        // a refused scope: "mcp 0" is authorised today as if only "mcp" had been
+        // asked for, and "0" alone falls through to the default below. An
+        // unsupported scope anywhere else in this method ends the request with
+        // invalid_scope, and for an authorization endpoint that is very probably
+        // the right answer for "0" as well — issuing a token for less than was
+        // requested, without saying so, is the failure mode OAuth's error
+        // responses exist to prevent. Making it so is a deliberate change to the
+        // auth path, not a by-product of satisfying a static analyser, so it is
+        // left as it is until it is decided. The change, when it comes, is to
+        // remove the '0' !== $s half and let the supported-scope loop reject it.
+        $requested = array_values(array_filter(
+            explode(' ', trim($scope)),
+            static fn (string $s): bool => '' !== $s && '0' !== $s,
+        ));
         if ($requested === []) {
             return ['mcp'];
         }
