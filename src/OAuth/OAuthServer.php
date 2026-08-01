@@ -54,16 +54,13 @@ final class OAuthServer
             throw new OAuthException('invalid_client_metadata', 'At least one redirect_uri is required.');
         }
         foreach ($redirectUris as $uri) {
-            if (!\is_string($uri)) {
-                throw new OAuthException('invalid_redirect_uri', 'redirect_uri is not a valid URL.');
-            }
             self::assertUsableRedirectUri($uri);
         }
 
         $client = new McpOAuthClient(
             clientId: 'mcpc_' . bin2hex(random_bytes(16)),
             clientName: $clientName !== '' ? mb_substr($clientName, 0, 191) : 'MCP Client',
-            redirectUris: array_values($redirectUris),
+            redirectUris: $redirectUris,
         );
 
         $this->entityManager->persist($client);

@@ -55,7 +55,7 @@ final class CreateMcpTokenCommand extends Command
         $admin = $this->adminUsers->findOneBy(['email' => $identifier])
             ?? $this->adminUsers->findOneBy(['username' => $identifier]);
 
-        if ($admin === null || !method_exists($admin, 'getId')) {
+        if ($admin === null) {
             $io->error(sprintf('No admin user found for "%s".', $identifier));
 
             return Command::FAILURE;
