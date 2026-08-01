@@ -1,3 +1,17 @@
+## [1.2.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.1...v1.2.2) (2026-08-01)
+
+### :bug: Fixes
+
+* **phpstan:** resolve 8 of 9 level-8 findings without suppressions ([8bce4ca](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/8bce4caad2a7f4e6a80781a34c63922ad9e0640f))
+
+### :zap: Refactor
+
+* **phpstan:** use the shared level-8 standard ([f46b82e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/f46b82eb8b861aa14f4b1ff34cdf08227728a6c3))
+
+### :repeat: Chores
+
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.32.2 ([14232de](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/14232de13df2536b1c5786c350e05e7f086bc4b9))
+
 ## [1.2.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.0...v1.2.1) (2026-08-01)
 
 ### :repeat: Chores
