@@ -5,7 +5,7 @@
 Please **do not** open public GitLab issues or merge requests for security
 problems. Instead, send a report to:
 
-- **Email**: security@ole-hartwig.eu
+- **Email**: <security@ole-hartwig.eu>
 - **PGP**: download the security key from
   <https://ole-hartwig.eu/.well-known/openpgpkey> (RFC 9580) and encrypt
   attachments
@@ -13,15 +13,15 @@ problems. Instead, send a report to:
 
 We commit to:
 
-| Stage              | SLA                                    |
-| ------------------ | -------------------------------------- |
-| First acknowledgement | within **72 hours** (business days) |
-| Vulnerability triage  | within **7 days**                   |
-| Fix plan for Critical | within **14 days**                  |
-| Coordinated disclosure window default | **90 days** after first response |
+| Stage                                 | SLA                                 |
+| ------------------------------------- | ----------------------------------- |
+| First acknowledgement                 | within **72 hours** (business days) |
+| Vulnerability triage                  | within **7 days**                   |
+| Fix plan for Critical                 | within **14 days**                  |
+| Coordinated disclosure window default | **90 days** after first response    |
 
 If you don't hear back within the first acknowledgement window, please
-escalate via support@ole-hartwig.eu.
+escalate via <support@ole-hartwig.eu>.
 
 ## Coordinated disclosure
 
@@ -36,6 +36,7 @@ Public Security Advisories live at
 ## Scope
 
 In scope:
+
 - All repositories under `devops/**` and `development/moselwal/**` on
   git.ole-hartwig.eu
 - All container images under `registry.ole-hartwig.eu/devops/images/**` and
@@ -43,10 +44,25 @@ In scope:
 - Production sites operated by Kai Ole Hartwig
 
 Out of scope:
+
 - Findings that require physical access to a device operated by Kai Ole Hartwig
 - Denial-of-service via volumetric attacks
 - Social engineering, phishing, or attacks against Kai Ole Hartwig or engaged contractors
 - Third-party services we use (please report directly to the vendor)
+
+## Machine-readable advisories (CSAF 2.0)
+
+In addition to this human-readable policy, Kai Ole Hartwig publishes
+machine-readable security advisories per **BSI TR-03191 / OASIS CSAF 2.0**:
+
+- **Provider metadata**: <https://ole-hartwig.eu/.well-known/csaf-provider-metadata.json>
+- **Signing key**: <https://ole-hartwig.eu/.well-known/csaf/openpgp-key.asc>
+  (`csaf@ole-hartwig.eu`, fingerprint `53A6F843 1A05DFF1 F42D430D 2471027C E8E34A53`)
+
+Tooling that consumes CSAF feeds (vulnerability scanners, SBOM diff tools, etc.)
+can discover the feed via the well-known URL and verify the OpenPGP signature
+on each advisory. The role declared in `provider-metadata.json` is
+`csaf_trusted_provider`.
 
 ## Vulnerability handling process
 
@@ -58,6 +74,7 @@ Out of scope:
 6. CVE published, reporter credited
 
 This file is the canonical source of truth for the vulnerability
-disclosure policy of Kai Ole Hartwig and is mirrored at every repository under my control.
+disclosure policy of Kai Ole Hartwig and is mirrored at every repository
+under my control.
 For corrections to the policy itself, open an MR against
 `devops/repo-templates/SECURITY.md`.
