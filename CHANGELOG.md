@@ -1,3 +1,21 @@
+## [1.2.4](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.3...v1.2.4) (2026-08-03)
+
+### :repeat: Chores
+
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.32.5 ([cc8e19a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/cc8e19a4d8687c4a471dde122a041be21e2cfade))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.32.6 ([abfadac](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/abfadacf0a0bf2c605e753150540918f9af4f3c2))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.32.7 ([b1e2f75](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/b1e2f75c20b321b43bead1fa406a9949fe53ca61))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.33.0 ([14fbbb3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/14fbbb31ecefa94dd0bd1e7d58c3e0d4862baa26))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.34.0 ([29a5596](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/29a55969b094001700ac496ba2bb484fde46f898))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.34.1 ([5ce6b60](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/5ce6b60983cab05302eac233c832c5e75fad599a))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.34.2 ([a0fc6e0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/a0fc6e042d7c15520874754a3e557a03f193117d))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.35.0 ([805728a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/805728a82fa1a948940d5b0cfdfd41c46fc4327c))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.35.1 ([3950753](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/395075355668d50cc03f90b5085cfc735bf61b08))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.35.2 ([930a1c4](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/930a1c4be6d35e7b7d2b38ad19c2fa8c7b29e143))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.36.2 ([9d3ec54](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/9d3ec547849f8e350a3050a5e796967168fb02df))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.36.4 ([5c1c44e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/5c1c44ee83282f83f64bf0ef64674a9b567eadf2))
+* **security:** Templates auf devops/repo-templates abgleichen ([31699cc](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/31699cc1bb0037f9d7c339f64a9f4d67aa9e6bfe))
+
 ## [1.2.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.2...v1.2.3) (2026-08-01)
 
 ### :bug: Fixes
