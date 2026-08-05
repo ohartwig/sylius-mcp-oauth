@@ -26,6 +26,8 @@
     },
     "require": {
         "php": "^8.2",
+        "ext-ctype": "*",
+        "ext-mbstring": "*",
         "doctrine/doctrine-bundle": "^2.12",
         "doctrine/orm": "^3.0",
         "doctrine/persistence": "^3.0 || ^4.0",
@@ -39,7 +41,9 @@
         "symfony/http-foundation": "^7.4 || ^8.0",
         "symfony/http-kernel": "^7.4 || ^8.0",
         "symfony/routing": "^7.4 || ^8.0",
-        "symfony/security-bundle": "^7.4 || ^8.0"
+        "symfony/security-bundle": "^7.4 || ^8.0",
+        "symfony/security-core": "^7.4 || ^8.0",
+        "symfony/security-http": "^7.4 || ^8.0"
     },
     "require-dev": {
         "moselwal/dev-sylius": "^1.0",
