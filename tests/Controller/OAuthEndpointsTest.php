@@ -1,0 +1,343 @@
+<?php
+
+// SPDX-FileCopyrightText: 2026 Kai Ole Hartwig
+// SPDX-License-Identifier: MIT
+
+declare(strict_types=1);
+
+namespace Koh\SyliusMcpOAuth\Tests\Controller;
+
+use Doctrine\ORM\EntityManagerInterface;
+use Doctrine\ORM\EntityRepository;
+use Doctrine\ORM\Query;
+use Koh\SyliusMcpOAuth\Controller\RegisterController;
+use Koh\SyliusMcpOAuth\Controller\RevokeController;
+use Koh\SyliusMcpOAuth\Controller\TokenController;
+use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
+use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
+use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
+use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
+use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
+use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\TestCase;
+use Symfony\Component\HttpFoundation\JsonResponse;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
+
+/**
+ * The three unauthenticated OAuth endpoints. They are reachable by anyone, so
+ * what they refuse matters more than what they return: the token endpoint must
+ * not mint a token from a bad grant, and the revocation endpoint must not let a
+ * caller learn which tokens exist by watching its answers.
+ */
+#[CoversClass(TokenController::class)]
+#[CoversClass(RegisterController::class)]
+#[CoversClass(RevokeController::class)]
+final class OAuthEndpointsTest extends TestCase
+{
+    private const VERIFIER = 'a-verifier-long-enough-to-be-realistic-0123456789';
+    private const CLIENT_ID = 'mcpc_abc';
+    private const REDIRECT_URI = 'https://client.example/cb';
+
+    // --- token endpoint ------------------------------------------------------
+
+    public function testAValidGrantYieldsABearerToken(): void
+    {
+        $response = $this->token($this->tokenRequest());
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+
+        $body = $this->body($response);
+        self::assertSame('Bearer', $body['token_type']);
+        self::assertStringStartsWith('tbmcp_', $body['access_token']);
+        self::assertSame('mcp', $body['scope']);
+    }
+
+    public function testTheAdvertisedLifetimeMatchesTheTokenTtl(): void
+    {
+        // A client caches the token for expires_in seconds. If that disagrees
+        // with the stored expiry, the client keeps using a token the server has
+        // already stopped accepting.
+        $body = $this->body($this->token($this->tokenRequest()));
+
+        self::assertSame(OAuthServer::TOKEN_TTL_DAYS * 86400, $body['expires_in']);
+    }
+
+    public function testAnUnsupportedGrantTypeIsRefusedWithoutTouchingTheCode(): void
+    {
+        $response = $this->token($this->tokenRequest(['grant_type' => 'password']));
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        self::assertSame('unsupported_grant_type', $this->body($response)['error']);
+    }
+
+    public function testAMissingGrantTypeIsRefused(): void
+    {
+        $request = $this->tokenRequest();
+        $request->request->remove('grant_type');
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $this->token($request)->getStatusCode());
+    }
+
+    public function testAFailedExchangeReturnsTheProtocolErrorAndNoToken(): void
+    {
+        // The OAuth error code is what a client branches on; losing it turns a
+        // precise failure into an opaque one.
+        $response = $this->token($this->tokenRequest(['code_verifier' => 'wrong']));
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+
+        $body = $this->body($response);
+        self::assertSame('invalid_grant', $body['error']);
+        self::assertArrayNotHasKey('access_token', $body);
+    }
+
+    public function testTokenResponsesAreNeverCached(): void
+    {
+        // A cached token response would hand the same bearer token to whoever
+        // shares the cache.
+        foreach ([$this->tokenRequest(), $this->tokenRequest(['grant_type' => 'password'])] as $request) {
+            self::assertStringContainsString(
+                'no-store',
+                (string) $this->token($request)->headers->get('Cache-Control'),
+            );
+        }
+    }
+
+    public function testTheTokenEndpointIsReachableCrossOrigin(): void
+    {
+        // MCP clients run in browsers; without this the exchange fails at the
+        // preflight and the whole flow is unusable from a web client.
+        self::assertSame('*', $this->token($this->tokenRequest())->headers->get('Access-Control-Allow-Origin'));
+    }
+
+    public function testTheMintedTokenIsBoundToTheConsentingAdmin(): void
+    {
+        $persisted = null;
+        $response = $this->token($this->tokenRequest(), function (object $entity) use (&$persisted): void {
+            if ($entity instanceof McpAccessToken) {
+                $persisted = $entity;
+            }
+        });
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertInstanceOf(McpAccessToken::class, $persisted);
+        // 7 is the admin who consented at /authorize, carried on the code.
+        self::assertSame(7, $persisted->getAdminUserId());
+        self::assertSame(self::CLIENT_ID, $persisted->getClientId());
+    }
+
+    // --- registration endpoint ----------------------------------------------
+
+    public function testRegistrationReturns201WithAClientIdentifier(): void
+    {
+        $response = $this->register([
+            'client_name' => 'My Client',
+            'redirect_uris' => [self::REDIRECT_URI],
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
+
+        $body = $this->body($response);
+        self::assertStringStartsWith('mcpc_', $body['client_id']);
+        self::assertSame(['code'], $body['response_types']);
+    }
+
+    public function testRegistrationRefusesAnUnusableRedirectUri(): void
+    {
+        // Registration is open, so this is the only place a hostile redirect
+        // target can be turned away before it is echoed into a Location header.
+        $response = $this->register([
+            'client_name' => 'Evil',
+            'redirect_uris' => ['javascript:alert(1)'],
+        ]);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        self::assertSame('invalid_redirect_uri', $this->body($response)['error']);
+    }
+
+    public function testRegistrationRefusesABodyWithNoRedirectUris(): void
+    {
+        $response = $this->register(['client_name' => 'My Client']);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        self::assertSame('invalid_client_metadata', $this->body($response)['error']);
+    }
+
+    public function testRegistrationSurvivesAMalformedBody(): void
+    {
+        // An unparseable body must produce the protocol error, not a 500.
+        $response = $this->registerRaw('not json at all');
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
+    public function testRegistrationIgnoresNonStringRedirectUriEntries(): void
+    {
+        // Entries that are objects or numbers are dropped rather than cast, so
+        // a caller cannot smuggle a structure past the URI validation.
+        $response = $this->register([
+            'client_name' => 'My Client',
+            'redirect_uris' => [self::REDIRECT_URI, 42, ['nested' => true]],
+        ]);
+
+        self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
+        self::assertSame([self::REDIRECT_URI], $this->body($response)['redirect_uris']);
+    }
+
+    public function testRegistrationRefusesARedirectUrisFieldThatIsNotAList(): void
+    {
+        $response = $this->register([
+            'client_name' => 'My Client',
+            'redirect_uris' => 'https://client.example/cb',
+        ]);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+    }
+
+    // --- revocation endpoint -------------------------------------------------
+
+    public function testRevocationAnswers200ForAKnownToken(): void
+    {
+        $token = new McpAccessToken(hash('sha256', 'x'), 7, 'laptop');
+
+        $response = $this->revoke('tbmcp_' . str_repeat('a', 64), $token);
+
+        self::assertSame(Response::HTTP_OK, $response->getStatusCode());
+        self::assertTrue($token->isRevoked());
+    }
+
+    public function testRevocationAnswers200ForAnUnknownTokenToo(): void
+    {
+        // RFC 7009. Differing answers would let a caller probe which tokens
+        // exist without ever holding a valid one.
+        $known = $this->revoke('tbmcp_' . str_repeat('a', 64), new McpAccessToken(hash('sha256', 'x'), 7, 'l'));
+        $unknown = $this->revoke('tbmcp_' . str_repeat('b', 64), null);
+
+        self::assertSame($known->getStatusCode(), $unknown->getStatusCode());
+        self::assertSame(Response::HTTP_OK, $unknown->getStatusCode());
+    }
+
+    public function testRevocationAnswers200ForAnAbsentTokenField(): void
+    {
+        self::assertSame(Response::HTTP_OK, $this->revoke(null, null)->getStatusCode());
+    }
+
+    public function testTheRevocationEndpointIsReachableCrossOrigin(): void
+    {
+        self::assertSame(
+            '*',
+            $this->revoke('tbmcp_' . str_repeat('a', 64), null)->headers->get('Access-Control-Allow-Origin'),
+        );
+    }
+
+    // --- helpers -------------------------------------------------------------
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function body(JsonResponse $response): array
+    {
+        $decoded = json_decode((string) $response->getContent(), true);
+
+        return \is_array($decoded) ? $decoded : [];
+    }
+
+    private function challenge(): string
+    {
+        return rtrim(strtr(base64_encode(hash('sha256', self::VERIFIER, true)), '+/', '-_'), '=');
+    }
+
+    /**
+     * @param array<string, string> $overrides
+     */
+    private function tokenRequest(array $overrides = []): Request
+    {
+        return new Request(request: array_merge([
+            'grant_type' => 'authorization_code',
+            'code' => 'raw-code',
+            'client_id' => self::CLIENT_ID,
+            'redirect_uri' => self::REDIRECT_URI,
+            'code_verifier' => self::VERIFIER,
+        ], $overrides));
+    }
+
+    private function token(Request $request, ?\Closure $persistCallback = null): JsonResponse
+    {
+        $entityManager = $this->entityManager($persistCallback);
+
+        return (new TokenController())(
+            $request,
+            new OAuthServer($entityManager),
+            new AccessTokenManager($entityManager),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $body
+     */
+    private function register(array $body): JsonResponse
+    {
+        return $this->registerRaw(json_encode($body, \JSON_THROW_ON_ERROR));
+    }
+
+    private function registerRaw(string $content): JsonResponse
+    {
+        return (new RegisterController())(
+            new Request(content: $content),
+            new OAuthServer($this->entityManager()),
+        );
+    }
+
+    private function revoke(?string $rawToken, ?McpAccessToken $token): JsonResponse
+    {
+        $tokens = $this->createStub(EntityRepository::class);
+        $tokens->method('findOneBy')->willReturn($token);
+
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($tokens);
+
+        return (new RevokeController())(
+            new Request(request: $rawToken === null ? [] : ['token' => $rawToken]),
+            new AccessTokenManager($entityManager),
+        );
+    }
+
+    private function entityManager(?\Closure $persistCallback = null): EntityManagerInterface
+    {
+        $code = new McpAuthorizationCode(
+            codeHash: hash('sha256', 'raw-code'),
+            clientId: self::CLIENT_ID,
+            adminUserId: 7,
+            redirectUri: self::REDIRECT_URI,
+            scopes: ['mcp'],
+            codeChallenge: $this->challenge(),
+            codeChallengeMethod: 'S256',
+            expiresAt: (new \DateTimeImmutable())->modify('+300 seconds'),
+        );
+
+        $codes = $this->createStub(EntityRepository::class);
+        $codes->method('findOneBy')->willReturn($code);
+
+        $clients = $this->createStub(EntityRepository::class);
+        $clients->method('findOneBy')->willReturn(
+            new McpOAuthClient(self::CLIENT_ID, 'My Client', [self::REDIRECT_URI]),
+        );
+
+        $query = $this->createStub(Query::class);
+        $query->method('setParameter')->willReturnSelf();
+        $query->method('execute')->willReturn(1);
+
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturnCallback(
+            static fn (string $class): EntityRepository => McpAuthorizationCode::class === $class ? $codes : $clients,
+        );
+        $entityManager->method('createQuery')->willReturn($query);
+
+        if ($persistCallback !== null) {
+            $entityManager->method('persist')->willReturnCallback($persistCallback);
+        }
+
+        return $entityManager;
+    }
+}
