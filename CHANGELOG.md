@@ -1,3 +1,9 @@
+## [1.2.6](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.5...v1.2.6) (2026-08-12)
+
+### :repeat: Chores
+
+* **deps:** update phpstan packages ([13813e3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/13813e3a038bf101ecbb9014ea47a037cdf9af92))
+
 ## [1.2.5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.4...v1.2.5) (2026-08-12)
 
 ### :bug: Fixes
