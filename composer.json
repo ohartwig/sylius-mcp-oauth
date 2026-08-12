@@ -47,9 +47,9 @@
     },
     "require-dev": {
         "moselwal/dev-sylius": "^1.0",
-        "phpstan/extension-installer": "^1.4",
-        "phpstan/phpstan": "^2.0",
-        "phpstan/phpstan-doctrine": "^2.0",
+        "phpstan/extension-installer": "^1.4.3",
+        "phpstan/phpstan": "^2.2.8",
+        "phpstan/phpstan-doctrine": "^2.0.28",
         "phpunit/phpunit": "^11.5.50"
     },
     "autoload": {
