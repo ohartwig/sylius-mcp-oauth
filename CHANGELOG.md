@@ -1,3 +1,29 @@
+## [1.2.5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.4...v1.2.5) (2026-08-12)
+
+### :bug: Fixes
+
+* **deps:** require the Symfony security components the authenticator is built on ([0034f08](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/0034f08335721d58f19d8090b7c17b690ff01254))
+* **deps:** update dependency sylius/sylius to ^2.0.18 [security] ([d597b19](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/d597b1962e96a2e830ff38d1867a71c70849a23c))
+
+### :white_check_mark: Tests
+
+* **oauth:** cover the authorization-code exchange ([183e297](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/183e29784b0382ef17025fd3be757207f139a8fe))
+* **oauth:** cover the consent flow on the authorization endpoint ([7d1751d](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/7d1751d9a06d6ef0557cd605f4565a5ffd1749c0))
+* **oauth:** cover the token, registration and revocation endpoints ([ac05de7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ac05de7e43193481b5a60eaabdccfc290f48cda2))
+* **security:** cover MCP token issuance and bearer authentication ([0ba7bc5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/0ba7bc5c1b2413fc17094d194030affeb582fa98))
+
+### :repeat: Continuous Integrations
+
+* follow the composed pipeline on [@1](https://git.ole-hartwig.eu/1) instead of an exact pin ([8e17d68](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/8e17d68f0e792e33612bb0d5b59945fa9ae8b663))
+
+### :repeat: Chores
+
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.36.12 ([5471278](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/5471278a054ed51679552658345948b2e1afd44e))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.36.5 ([98f4954](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/98f4954eee6e788c98947d6c9641a16180a4361c))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.36.6 ([073910e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/073910eb43179a736812f1b9be1ce8fc55da9a8b))
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v1.36.8 ([eb56c5c](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/eb56c5c44e0f3e1a83ecd716e0ff49a1847ae9ed))
+* **deps:** update dependency phpunit/phpunit to ^11.5.50 [security] ([3232c4d](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/3232c4dfa96fb6ac250ab50ef415a90fe08732ab))
+
 ## [1.2.4](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.3...v1.2.4) (2026-08-03)
 
 ### :repeat: Chores
