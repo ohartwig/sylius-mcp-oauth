@@ -1,3 +1,11 @@
+## [1.2.7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.6...v1.2.7) (2026-08-12)
+
+### :bug: Fixes
+
+* **deps:** update dependency doctrine/doctrine-bundle to ^2.19.0 ([435b7eb](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/435b7eb8e1574d9aee710b5cf11c33092e50a31f))
+* **deps:** update dependency php to ^8.5.9 ([3c7109c](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/3c7109c4ae5a904bce5b6ef051aa46e9737e3069))
+* **deps:** update dependency psr/log to ^3.0.2 ([dedef00](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/dedef005de788e1c58e7149e693af446d67d53b9))
+
 ## [1.2.6](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.5...v1.2.6) (2026-08-12)
 
 ### :repeat: Chores
