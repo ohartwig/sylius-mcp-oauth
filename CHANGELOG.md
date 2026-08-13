@@ -1,3 +1,13 @@
+## [1.2.9](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.8...v1.2.9) (2026-08-13)
+
+### :bug: Fixes
+
+* **deps:** update dependency sylius/sylius to ^2.2.8 ([ce5e18a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ce5e18a2525aa39e7994f02e7b6a15c7345ceb37))
+
+### :repeat: Chores
+
+* **deps:** update dependency phpunit/phpunit to ^11.5.56 ([e02b262](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/e02b262ca1cd7401c56b066a6c512d55405f743a))
+
 ## [1.2.8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.7...v1.2.8) (2026-08-12)
 
 ### :bug: Fixes
