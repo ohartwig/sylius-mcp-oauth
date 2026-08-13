@@ -50,7 +50,7 @@
         "phpstan/extension-installer": "^1.4.3",
         "phpstan/phpstan": "^2.2.8",
         "phpstan/phpstan-doctrine": "^2.0.28",
-        "phpunit/phpunit": "^11.5.50"
+        "phpunit/phpunit": "^11.5.56"
     },
     "autoload": {
         "psr-4": {
