@@ -17,6 +17,23 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'app_mcp_authorization_code')]
+/*
+ * idx_mcp_code_admin exists in the database -- Version20260713130000 in
+ * the consuming application created it -- but was never declared here, so
+ * a schema check asks for it to be dropped. It is the index the cleanup
+ * query for a revoked admin runs on; declaring it is the fix, dropping it
+ * is not.
+ */
+#[ORM\Index(name: 'idx_mcp_code_admin', columns: ['admin_user_id'])]
+/*
+ * The unique index is declared here, under the name the migration created,
+ * rather than as `unique: true` on the field. Doctrine derives a hashed
+ * UNIQ_... name from that flag, so a schema check comparing the mapping
+ * against a migrated database reports a RENAME INDEX for it on every run --
+ * forever, with nothing actually wrong. Same uniqueness, named where it can be
+ * read against the migration that wrote it.
+ */
+#[ORM\UniqueConstraint(name: 'UNIQ_app_mcp_code_hash', columns: ['code_hash'])]
 class McpAuthorizationCode
 {
     #[ORM\Id]
@@ -24,7 +41,7 @@ class McpAuthorizationCode
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\Column(name: 'code_hash', type: 'string', length: 64, unique: true)]
+    #[ORM\Column(name: 'code_hash', type: 'string', length: 64)]
     private string $codeHash;
 
     #[ORM\Column(name: 'client_id', type: 'string', length: 64)]

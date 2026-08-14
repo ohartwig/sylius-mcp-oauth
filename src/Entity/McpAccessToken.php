@@ -20,6 +20,15 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'app_mcp_access_token')]
 #[ORM\Index(name: 'idx_mcp_token_admin', columns: ['admin_user_id'])]
+/*
+ * The unique index is declared here, under the name the migration created,
+ * rather than as `unique: true` on the field. Doctrine derives a hashed
+ * UNIQ_... name from that flag, so a schema check comparing the mapping
+ * against a migrated database reports a RENAME INDEX for it on every run --
+ * forever, with nothing actually wrong. Same uniqueness, named where it can be
+ * read against the migration that wrote it.
+ */
+#[ORM\UniqueConstraint(name: 'UNIQ_app_mcp_token_hash', columns: ['token_hash'])]
 class McpAccessToken
 {
     #[ORM\Id]
@@ -28,7 +37,7 @@ class McpAccessToken
     private ?int $id = null;
 
     /** SHA-256 hex of the raw token. */
-    #[ORM\Column(name: 'token_hash', type: 'string', length: 64, unique: true)]
+    #[ORM\Column(name: 'token_hash', type: 'string', length: 64)]
     private string $tokenHash;
 
     /** FK to sylius_admin_user.id (plain id, not an ORM association — loose coupling to the Sylius model). */
