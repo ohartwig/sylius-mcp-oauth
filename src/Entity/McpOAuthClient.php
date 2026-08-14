@@ -17,6 +17,15 @@ use Doctrine\ORM\Mapping as ORM;
  */
 #[ORM\Entity]
 #[ORM\Table(name: 'app_mcp_oauth_client')]
+/*
+ * The unique index is declared here, under the name the migration created,
+ * rather than as `unique: true` on the field. Doctrine derives a hashed
+ * UNIQ_... name from that flag, so a schema check comparing the mapping
+ * against a migrated database reports a RENAME INDEX for it on every run --
+ * forever, with nothing actually wrong. Same uniqueness, named where it can be
+ * read against the migration that wrote it.
+ */
+#[ORM\UniqueConstraint(name: 'UNIQ_app_mcp_client_id', columns: ['client_id'])]
 class McpOAuthClient
 {
     #[ORM\Id]
@@ -24,7 +33,7 @@ class McpOAuthClient
     #[ORM\Column(type: 'integer')]
     private ?int $id = null;
 
-    #[ORM\Column(name: 'client_id', type: 'string', length: 64, unique: true)]
+    #[ORM\Column(name: 'client_id', type: 'string', length: 64)]
     private string $clientId;
 
     #[ORM\Column(name: 'client_name', type: 'string', length: 191)]
