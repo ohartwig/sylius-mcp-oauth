@@ -1,3 +1,9 @@
+## [1.2.10](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.9...v1.2.10) (2026-08-14)
+
+### :bug: Fixes
+
+* allow the infection extension installer plugin ([9893143](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/98931431f3f004ad2c1e833aa7cc5a1ea9a00ec6))
+
 ## [1.2.9](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.8...v1.2.9) (2026-08-13)
 
 ### :bug: Fixes
