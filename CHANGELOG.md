@@ -1,3 +1,9 @@
+## [1.2.11](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.10...v1.2.11) (2026-08-14)
+
+### :bug: Fixes
+
+* **entity:** declare the indexes the migrations actually created ([060fb82](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/060fb82f21d1a1d66673a0b52262888b5b7dde0d))
+
 ## [1.2.10](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.9...v1.2.10) (2026-08-14)
 
 ### :bug: Fixes
