@@ -136,6 +136,47 @@ final class AuthorizeFlowTest extends TestCase
         self::assertSame([], $persisted);
     }
 
+    /**
+     * The template is stubbed in every other test, which hides whether the
+     * consent screen actually receives what it needs to render the client's
+     * identity and to re-submit the same request as the POST. Losing either
+     * silently breaks the page rather than the protocol.
+     */
+    public function testTheConsentScreenReceivesTheClientAndTheOriginalRequestParameters(): void
+    {
+        $renderContext = null;
+        $this->authorize($this->query(), renderContext: $renderContext);
+
+        self::assertIsArray($renderContext);
+        self::assertArrayHasKey('client', $renderContext);
+        self::assertInstanceOf(McpOAuthClient::class, $renderContext['client']);
+        self::assertSame(self::CLIENT_ID, $renderContext['client']->getClientId());
+
+        self::assertArrayHasKey('query', $renderContext);
+        self::assertSame(self::CLIENT_ID, $renderContext['query']['client_id']);
+        self::assertSame(self::REDIRECT_URI, $renderContext['query']['redirect_uri']);
+    }
+
+    /**
+     * When the admin has an email, the consent screen must show *the email*,
+     * not merely some identifying string — the two happen to be equal for the
+     * default test admin, which is exactly what let a swapped branch here go
+     * unnoticed.
+     */
+    public function testTheConsentScreenShowsTheAdminsEmailRatherThanTheBareIdentifier(): void
+    {
+        $admin = $this->createStub(AdminUserInterface::class);
+        $admin->method('getId')->willReturn(99);
+        $admin->method('getEmail')->willReturn('admin@example.test');
+        $admin->method('getUserIdentifier')->willReturn('ohartwig');
+
+        $renderContext = null;
+        $this->authorize($this->query(), admin: $admin, renderContext: $renderContext);
+
+        self::assertIsArray($renderContext);
+        self::assertSame('admin@example.test', $renderContext['admin_label']);
+    }
+
     public function testApprovingIssuesACodeAndRedirectsBackToTheClient(): void
     {
         $response = $this->authorize($this->postRequest(['decision' => 'approve']));
@@ -261,7 +302,8 @@ final class AuthorizeFlowTest extends TestCase
     }
 
     /**
-     * @param array<object> $persisted
+     * @param array<object>             $persisted
+     * @param array<string, mixed>|null $renderContext
      */
     private function authorize(
         Request $request,
@@ -271,6 +313,7 @@ final class AuthorizeFlowTest extends TestCase
         bool $csrfValid = true,
         string $registeredRedirectUri = self::REDIRECT_URI,
         array &$persisted = [],
+        ?array &$renderContext = null,
     ): Response {
         $clients = $this->createStub(EntityRepository::class);
         $clients->method('findOneBy')->willReturn(
@@ -289,6 +332,7 @@ final class AuthorizeFlowTest extends TestCase
         $controller->setContainer($this->container(
             $authenticated ? ($admin ?? $this->admin()) : null,
             $csrfValid,
+            $renderContext,
         ));
 
         return $controller($request, new OAuthServer($entityManager));
@@ -304,7 +348,8 @@ final class AuthorizeFlowTest extends TestCase
         return $admin;
     }
 
-    private function container(?AdminUserInterface $admin, bool $csrfValid): ContainerInterface
+    /** @param array<string, mixed>|null $renderContext */
+    private function container(?AdminUserInterface $admin, bool $csrfValid, ?array &$renderContext = null): ContainerInterface
     {
         $tokenStorage = $this->createStub(TokenStorageInterface::class);
         if ($admin !== null) {
@@ -319,7 +364,13 @@ final class AuthorizeFlowTest extends TestCase
         $csrf->method('isTokenValid')->willReturn($csrfValid);
 
         $twig = $this->createStub(Environment::class);
-        $twig->method('render')->willReturn('<html>consent</html>');
+        $twig->method('render')->willReturnCallback(
+            function (string $name, array $context) use (&$renderContext): string {
+                $renderContext = $context;
+
+                return '<html>consent</html>';
+            },
+        );
 
         $services = [
             'security.token_storage' => $tokenStorage,

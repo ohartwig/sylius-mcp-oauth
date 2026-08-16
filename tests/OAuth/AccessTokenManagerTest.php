@@ -83,6 +83,30 @@ final class AccessTokenManagerTest extends TestCase
         self::assertSame(['mcp', 'read'], $persisted->getScopes());
     }
 
+    public function testAnUnspecifiedScopeDefaultsToMcp(): void
+    {
+        $persisted = null;
+        $manager = $this->manager(persistCallback: function (object $entity) use (&$persisted): void {
+            $persisted = $entity;
+        });
+
+        $manager->create(adminUserId: 7, name: 'laptop');
+
+        self::assertInstanceOf(McpAccessToken::class, $persisted);
+        self::assertSame(['mcp'], $persisted->getScopes());
+    }
+
+    public function testCreatingATokenFlushesIt(): void
+    {
+        // A persisted-but-unflushed token does not exist as far as any other
+        // request is concerned; the caller believes a token was minted.
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
+        $entityManager->expects(self::once())->method('flush');
+
+        (new AccessTokenManager($entityManager))->create(adminUserId: 7, name: 'laptop');
+    }
+
     public function testLookupHashesThePresentedTokenRatherThanQueryingItRaw(): void
     {
         // Querying the raw value would never match the stored column, and would
@@ -145,6 +169,20 @@ final class AccessTokenManagerTest extends TestCase
         self::assertNotNull($token->getLastUsedAt());
     }
 
+    public function testResolvingAValidTokenFlushesTheRecordedUse(): void
+    {
+        // touch() only updates the in-memory entity; without the flush the
+        // last-used timestamp never reaches the database.
+        $repository = $this->createStub(EntityRepository::class);
+        $repository->method('findOneBy')->willReturn($this->token());
+
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($repository);
+        $entityManager->expects(self::once())->method('flush');
+
+        (new AccessTokenManager($entityManager))->findValid($this->rawToken());
+    }
+
     public function testATokenWithoutAnExpiryStaysValid(): void
     {
         $token = $this->token(expiresAt: null);
@@ -159,6 +197,42 @@ final class AccessTokenManagerTest extends TestCase
         $this->managerFinding($token)->revokeRaw($this->rawToken());
 
         self::assertTrue($token->isRevoked());
+    }
+
+    public function testRevokeFlushesTheRevocation(): void
+    {
+        // A revoked-but-unflushed token is still accepted by the next request;
+        // revoke() would be cosmetic without this.
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
+        $entityManager->expects(self::once())->method('flush');
+
+        (new AccessTokenManager($entityManager))->revoke($this->token());
+    }
+
+    public function testRevokeIsCallableFromOutsideTheClass(): void
+    {
+        // The management screen and RFC 7009's revokeRaw() both call this from
+        // outside AccessTokenManager; it has to stay part of the public API.
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
+        $token = $this->token();
+
+        (new AccessTokenManager($entityManager))->revoke($token);
+
+        self::assertTrue($token->isRevoked());
+    }
+
+    public function testRevokingByRawTokenLooksUpByTheHashedTokenSpecifically(): void
+    {
+        $raw = $this->rawToken();
+        $repository = $this->createMock(EntityRepository::class);
+        $repository->expects(self::once())
+            ->method('findOneBy')
+            ->with(['tokenHash' => hash('sha256', $raw)])
+            ->willReturn(null);
+
+        $this->manager(repository: $repository)->revokeRaw($raw);
     }
 
     public function testRevokingAnUnknownRawTokenIsASilentNoOp(): void
@@ -192,6 +266,23 @@ final class AccessTokenManagerTest extends TestCase
             ->willReturn([]);
 
         self::assertSame([], $this->manager(repository: $repository)->findForAdminUser(7));
+    }
+
+    /**
+     * All of the admin's tokens must come back, not just the newest.
+     *
+     * A prior version of this suite only ever asked the repository for an
+     * empty result, so a mutation that truncated the return value to its first
+     * element whenever there was more than one went unnoticed.
+     */
+    public function testAllOfTheAdminsTokensAreReturnedNotJustTheFirst(): void
+    {
+        $first = $this->token();
+        $second = $this->token();
+        $repository = $this->createStub(EntityRepository::class);
+        $repository->method('findBy')->willReturn([$first, $second]);
+
+        self::assertSame([$first, $second], $this->manager(repository: $repository)->findForAdminUser(7));
     }
 
     // --- helpers -------------------------------------------------------------
