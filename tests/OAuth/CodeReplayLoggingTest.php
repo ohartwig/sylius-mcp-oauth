@@ -36,9 +36,12 @@ final class CodeReplayLoggingTest extends TestCase
                 self::stringContains('redeemed twice'),
                 self::callback(static function (array $ctx): bool {
                     // The full hash is the lookup key for a live code and must
-                    // not reach the log; a prefix is enough to correlate.
+                    // not reach the log; a prefix is enough to correlate. It
+                    // has to be *the* prefix — the first 12 hex characters of
+                    // the hash the lookup used — not merely 12 characters of
+                    // something.
                     return $ctx['client_id'] === 'mcpc_abc'
-                        && 12 === \strlen((string) $ctx['code_hash_prefix']);
+                        && $ctx['code_hash_prefix'] === substr(hash('sha256', 'raw-code'), 0, 12);
                 }),
             );
 

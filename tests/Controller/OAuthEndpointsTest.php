@@ -137,10 +137,55 @@ final class OAuthEndpointsTest extends TestCase
         ]);
 
         self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
+        self::assertSame('*', $response->headers->get('Access-Control-Allow-Origin'));
 
         $body = $this->body($response);
         self::assertStringStartsWith('mcpc_', $body['client_id']);
         self::assertSame(['code'], $body['response_types']);
+    }
+
+    /**
+     * The rest of the RFC 7591 response body: what the endpoint returns beyond
+     * the client_id and the redirect_uris that are already exercised elsewhere.
+     */
+    public function testRegistrationResponseCarriesTheFullClientRecord(): void
+    {
+        $before = time();
+        $body = $this->body($this->register([
+            'client_name' => 'My Client',
+            'redirect_uris' => [self::REDIRECT_URI],
+        ]));
+
+        self::assertSame('My Client', $body['client_name']);
+        self::assertSame(['authorization_code'], $body['grant_types']);
+        self::assertSame('none', $body['token_endpoint_auth_method']);
+        self::assertGreaterThanOrEqual($before, $body['client_id_issued_at']);
+        self::assertLessThanOrEqual(time(), $body['client_id_issued_at']);
+    }
+
+    /** RFC 7591 does not require client_name; the server names the client itself. */
+    public function testRegistrationWithoutAClientNameFallsBackToAPlaceholder(): void
+    {
+        $body = $this->body($this->register(['redirect_uris' => [self::REDIRECT_URI]]));
+
+        self::assertSame('MCP Client', $body['client_name']);
+    }
+
+    /**
+     * A failed registration must name why, not just that it failed — the
+     * description is what a client-side developer actually acts on.
+     */
+    public function testARefusedRegistrationCarriesTheErrorDescription(): void
+    {
+        $body = $this->body($this->register([
+            'client_name' => 'Evil',
+            'redirect_uris' => ['javascript:alert(1)'],
+        ]));
+
+        self::assertSame(
+            'Scheme "javascript" is not allowed for a redirect_uri.',
+            $body['error_description'],
+        );
     }
 
     public function testRegistrationRefusesAnUnusableRedirectUri(): void
@@ -183,6 +228,23 @@ final class OAuthEndpointsTest extends TestCase
 
         self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
         self::assertSame([self::REDIRECT_URI], $this->body($response)['redirect_uris']);
+    }
+
+    /**
+     * The filtered list must be re-indexed from 0, not just non-empty.
+     *
+     * Dropping the leading non-string entries without re-indexing would leave
+     * the surviving URI at key 1, which json_encode()s as a JSON *object*
+     * (`{"1":"…"}`), not the array an OAuth client expects for redirect_uris.
+     */
+    public function testRegistrationReindexesTheRedirectUrisAfterDroppingLeadingNonStringEntries(): void
+    {
+        $body = $this->body($this->register([
+            'client_name' => 'My Client',
+            'redirect_uris' => [42, ['nested' => true], self::REDIRECT_URI],
+        ]));
+
+        self::assertSame([self::REDIRECT_URI], $body['redirect_uris']);
     }
 
     public function testRegistrationRefusesARedirectUrisFieldThatIsNotAList(): void

@@ -33,6 +33,39 @@ final class CodeExchangeTest extends TestCase
     private const REDIRECT_URI = 'https://client.example/cb';
     private const RAW_CODE = 'raw-code';
 
+    /**
+     * The code lookup is keyed on the hash of the presented raw code, not on
+     * an arbitrary/empty filter that any stored code would satisfy — that
+     * distinction is what makes a code single-use and code-specific at all.
+     */
+    public function testConsumeCodeLooksUpByTheHashedCodeSpecifically(): void
+    {
+        $codes = $this->createMock(EntityRepository::class);
+        $codes->expects(self::once())
+            ->method('findOneBy')
+            ->with(['codeHash' => hash('sha256', self::RAW_CODE)])
+            ->willReturn(null);
+
+        $clients = $this->createStub(EntityRepository::class);
+
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturnCallback(
+            static fn (string $class): EntityRepository => McpAuthorizationCode::class === $class ? $codes : $clients,
+        );
+
+        try {
+            (new OAuthServer($entityManager))->consumeCode(
+                self::RAW_CODE,
+                self::CLIENT_ID,
+                self::REDIRECT_URI,
+                self::VERIFIER,
+            );
+            self::fail('Expected the exchange to be refused (no code was returned).');
+        } catch (OAuthException $exception) {
+            self::assertSame('invalid_grant', $exception->error);
+        }
+    }
+
     public function testAValidExchangeReturnsTheAuthorisedAdminAndScopes(): void
     {
         $result = $this->server()->consumeCode(
@@ -251,6 +284,52 @@ final class CodeExchangeTest extends TestCase
         self::assertSame([self::REDIRECT_URI], $client->getRedirectUris());
     }
 
+    /**
+     * 16 random bytes, hex-encoded. A shorter identifier would be enumerable —
+     * client_id is not treated as a secret anywhere else in this bundle.
+     */
+    public function testTheClientIdCarriesEnoughEntropyToResistGuessing(): void
+    {
+        $clientId = $this->server()->registerClient('My Client', [self::REDIRECT_URI])->getClientId();
+
+        self::assertMatchesRegularExpression('/^mcpc_[0-9a-f]{32}$/', $clientId);
+    }
+
+    public function testRegisteringAClientFlushesIt(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
+        $entityManager->expects(self::once())->method('flush');
+
+        (new OAuthServer($entityManager))->registerClient('My Client', [self::REDIRECT_URI]);
+    }
+
+    /**
+     * findClient() is called from AuthorizeController, outside this class, so
+     * it has to stay part of the public API — and the lookup has to be keyed
+     * on the client_id actually asked for, not on an arbitrary/empty filter
+     * that would let any registered client answer for any requested id.
+     */
+    public function testFindClientIsCallableFromOutsideTheClassAndFiltersByTheRequestedId(): void
+    {
+        $wanted = new McpOAuthClient(self::CLIENT_ID, 'Wanted', [self::REDIRECT_URI]);
+        $other = new McpOAuthClient('mcpc_other', 'Other', [self::REDIRECT_URI]);
+        $byId = ['mcpc_other' => $other, self::CLIENT_ID => $wanted];
+
+        $clients = $this->createStub(EntityRepository::class);
+        $clients->method('findOneBy')->willReturnCallback(
+            static fn (array $criteria): ?McpOAuthClient => $byId[$criteria['clientId']] ?? null,
+        );
+
+        $entityManager = $this->createStub(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($clients);
+
+        $server = new OAuthServer($entityManager);
+
+        self::assertSame($wanted, $server->findClient(self::CLIENT_ID));
+        self::assertNull($server->findClient('mcpc_unknown'));
+    }
+
     public function testTwoRegistrationsNeverShareAClientIdentifier(): void
     {
         $server = $this->server();
@@ -285,6 +364,55 @@ final class CodeExchangeTest extends TestCase
         $client = $this->server()->registerClient(str_repeat('n', 500), [self::REDIRECT_URI]);
 
         self::assertSame(191, mb_strlen($client->getClientName()));
+    }
+
+    /**
+     * Truncation must count *characters*, not bytes, and it must keep the
+     * first character rather than skip it.
+     *
+     * A name of nothing but 2-byte UTF-8 characters makes a byte-based cut
+     * (substr() instead of mb_substr()) both shorter in character count and
+     * invalid UTF-8 at the boundary — either is a real, user-visible corruption
+     * of a shop's own client name, not merely a coverage gap.
+     */
+    public function testAnOverlongMultibyteClientNameIsTruncatedByCharacterFromTheStart(): void
+    {
+        $name = 'A' . str_repeat('ü', 300);
+
+        $client = $this->server()->registerClient($name, [self::REDIRECT_URI]);
+
+        self::assertSame('A' . str_repeat('ü', 190), $client->getClientName());
+    }
+
+    /** 32 random bytes, hex-encoded. A shorter code would be enumerable. */
+    public function testTheIssuedCodeCarriesEnoughEntropyToResistGuessing(): void
+    {
+        $raw = $this->server()->issueCode(
+            new McpOAuthClient(self::CLIENT_ID, 'Client', [self::REDIRECT_URI]),
+            adminUserId: 7,
+            redirectUri: self::REDIRECT_URI,
+            scopes: ['mcp'],
+            codeChallenge: $this->challenge(),
+            codeChallengeMethod: 'S256',
+        );
+
+        self::assertMatchesRegularExpression('/^[0-9a-f]{64}$/', $raw);
+    }
+
+    public function testIssuingACodeFlushesIt(): void
+    {
+        $entityManager = $this->createMock(EntityManagerInterface::class);
+        $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
+        $entityManager->expects(self::once())->method('flush');
+
+        (new OAuthServer($entityManager))->issueCode(
+            new McpOAuthClient(self::CLIENT_ID, 'Client', [self::REDIRECT_URI]),
+            adminUserId: 7,
+            redirectUri: self::REDIRECT_URI,
+            scopes: ['mcp'],
+            codeChallenge: $this->challenge(),
+            codeChallengeMethod: 'S256',
+        );
     }
 
     public function testIssuingACodeReturnsTheRawValueAndStoresOnlyItsHash(): void

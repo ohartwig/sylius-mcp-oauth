@@ -26,9 +26,28 @@ final class MetadataControllerTest extends TestCase
         $metadata = $this->decode($this->controller()->authorizationServer(new Request()));
 
         self::assertSame('https://shop.example.com', $metadata['issuer']);
+        self::assertSame('https://shop.example.com/admin/mcp/authorize', $metadata['authorization_endpoint']);
         self::assertSame('https://shop.example.com/mcp/oauth/token', $metadata['token_endpoint']);
         self::assertSame('https://shop.example.com/mcp/oauth/register', $metadata['registration_endpoint']);
+        self::assertSame('https://shop.example.com/mcp/oauth/revoke', $metadata['revocation_endpoint']);
+        self::assertSame(['code'], $metadata['response_types_supported']);
+        self::assertSame(['authorization_code'], $metadata['grant_types_supported']);
         self::assertSame(['S256'], $metadata['code_challenge_methods_supported']);
+        self::assertSame(['none'], $metadata['token_endpoint_auth_methods_supported']);
+    }
+
+    /**
+     * A client caches this document for maxAge seconds (RFC 8414 does not
+     * mandate revalidation), so a wrong value either serves a rotated endpoint
+     * long after the change or hammers the server every request.
+     */
+    public function testDiscoveryDocumentsAreCacheableForFiveMinutes(): void
+    {
+        $authServer = $this->controller()->authorizationServer(new Request());
+        $protectedResource = $this->controller()->protectedResource(new Request());
+
+        self::assertSame(300, $authServer->getMaxAge());
+        self::assertSame(300, $protectedResource->getMaxAge());
     }
 
     /**
@@ -58,6 +77,10 @@ final class MetadataControllerTest extends TestCase
             $metadata['agent_auth']['register_uri'],
         );
         self::assertSame(['oauth2_access_token'], $metadata['agent_auth']['credential_types_supported']);
+        self::assertSame(
+            ['oauth_dynamic_client_registration'],
+            $metadata['agent_auth']['registration_methods_supported'],
+        );
     }
 
     /**
