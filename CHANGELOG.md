@@ -1,3 +1,13 @@
+## [1.2.13](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.12...v1.2.13) (2026-08-22)
+
+### :white_check_mark: Tests
+
+* kill 63 mutation-testing survivors on the OAuth authorization path ([b118706](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/b118706ca322073977b62744948282d616ca33bf))
+
+### :repeat: Chores
+
+* **repo-templates:** sync ([3f078ad](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/3f078ad960a89722c2fd206d019d86eda8239181))
+
 ## [1.2.12](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.11...v1.2.12) (2026-08-15)
 
 ### :repeat: Chores
