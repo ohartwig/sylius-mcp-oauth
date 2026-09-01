@@ -37,10 +37,9 @@ Public Security Advisories live at
 
 In scope:
 
-- All repositories under `devops/**` and `development/moselwal/**` on
-  git.ole-hartwig.eu
+- All repositories under `devops/**` and `development/**` on git.ole-hartwig.eu
 - All container images under `registry.ole-hartwig.eu/devops/images/**` and
-  `registry.ole-hartwig.eu/development/moselwal/**`
+  `registry.ole-hartwig.eu/development/**`
 - Production sites operated by Kai Ole Hartwig
 
 Out of scope:
@@ -55,14 +54,18 @@ Out of scope:
 In addition to this human-readable policy, Kai Ole Hartwig publishes
 machine-readable security advisories per **BSI TR-03191 / OASIS CSAF 2.0**:
 
-- **Provider metadata**: <https://ole-hartwig.eu/.well-known/csaf-provider-metadata.json>
+- **Provider metadata**: <https://ole-hartwig.eu/.well-known/csaf/provider-metadata.json>
 - **Signing key**: <https://ole-hartwig.eu/.well-known/csaf/openpgp-key.asc>
-  (`csaf@ole-hartwig.eu`, fingerprint `53A6F843 1A05DFF1 F42D430D 2471027C E8E34A53`)
+
+The key fingerprint is not repeated here. The provider metadata carries it as
+the single source of truth, and it is still `TBD-PRE-FIRST-ADVISORY` there — a
+fingerprint written down in every repository of the fleet before that is a
+claim nobody can check.
 
 Tooling that consumes CSAF feeds (vulnerability scanners, SBOM diff tools, etc.)
 can discover the feed via the well-known URL and verify the OpenPGP signature
 on each advisory. The role declared in `provider-metadata.json` is
-`csaf_trusted_provider`.
+`csaf_publisher`.
 
 ## Vulnerability handling process
 
