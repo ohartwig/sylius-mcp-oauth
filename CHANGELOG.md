@@ -1,3 +1,9 @@
+## [1.2.19](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.18...v1.2.19) (2026-09-02)
+
+### :repeat: Chores
+
+* **repo-templates:** sync ([40aa2d6](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/40aa2d6fab306711b5641928618ec6de0bf96f6a))
+
 ## [1.2.18](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.17...v1.2.18) (2026-09-02)
 
 ### :bug: Fixes
