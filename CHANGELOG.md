@@ -1,3 +1,9 @@
+## [1.2.18](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.17...v1.2.18) (2026-09-02)
+
+### :bug: Fixes
+
+* **deps:** update dependency php to ^8.5.10 ([70512a3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/70512a31a8e6c272a8f4f33ea62dd8c0be67fdc8))
+
 ## [1.2.17](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.16...v1.2.17) (2026-09-01)
 
 ### :repeat: Chores
