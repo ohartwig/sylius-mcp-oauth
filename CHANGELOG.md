@@ -1,3 +1,9 @@
+## [1.2.20](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.19...v1.2.20) (2026-09-03)
+
+### :bug: Fixes
+
+* **deps:** update dependency sylius/sylius to ^2.2.9 ([6fc042a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/6fc042a816e6faffe1a9442f4ce0671dcba83b20))
+
 ## [1.2.19](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.18...v1.2.19) (2026-09-02)
 
 ### :repeat: Chores
