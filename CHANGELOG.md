@@ -1,3 +1,13 @@
+## [1.2.22](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.21...v1.2.22) (2026-09-08)
+
+### :bug: Fixes
+
+* **deps:** update dependency doctrine/orm to ^3.7.0 ([ba8a0e4](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ba8a0e46ac722b5f06fbcfae38dbc700786b01e4))
+
+### :repeat: Chores
+
+* **deps:** update dependency devops/ci-cd-components/composed-default-pipelines to v2 ([0c8d35b](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/0c8d35b752e2a8e687d826cabb522c22a30daf9b))
+
 ## [1.2.21](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.20...v1.2.21) (2026-09-04)
 
 ### :repeat: Chores
