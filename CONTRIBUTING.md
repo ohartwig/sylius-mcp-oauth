@@ -18,7 +18,7 @@ use the GitLab issue tracker linked from `composer.json`.
 
 Every commit must be signed off. By adding the line
 
-```
+```text
 Signed-off-by: Your Name <your.email@example.com>
 ```
 
