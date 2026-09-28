@@ -19,10 +19,10 @@
             "email": "mail@ole-hartwig.eu"
         }
     ],
-    "homepage": "https://ole-hartwig.eu/open-source/sylius-agent-ready",
+    "homepage": "https://github.com/ohartwig/sylius-mcp-oauth",
     "support": {
-        "issues": "https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/-/issues",
-        "source": "https://github.com/ole-hartwig/sylius-mcp-oauth"
+        "issues": "https://github.com/ohartwig/sylius-mcp-oauth/issues",
+        "source": "https://github.com/ohartwig/sylius-mcp-oauth"
     },
     "require": {
         "php": "^8.5.11",

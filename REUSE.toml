@@ -1,7 +1,7 @@
 version = 1
 SPDX-PackageName = "koh/sylius-mcp-oauth"
 SPDX-PackageSupplier = "Kai Ole Hartwig <mail@ole-hartwig.eu>"
-SPDX-PackageDownloadLocation = "https://github.com/ole-hartwig/sylius-mcp-oauth"
+SPDX-PackageDownloadLocation = "https://github.com/ohartwig/sylius-mcp-oauth"
 
 # Config, metadata and repo-template files. They carry no comment syntax that
 # survives their own tooling (composer.json, JSON-like configs), are generated

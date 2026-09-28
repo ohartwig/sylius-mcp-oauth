@@ -5,14 +5,15 @@ SPDX-License-Identifier: MIT
 
 # Contributing
 
-Issues and merge requests are welcome.
+Issues and pull requests are welcome.
 
 ## Where to file things
 
-Development happens on **GitLab**: <https://git.ole-hartwig.eu/ai-ready-platform/platform>.
-The GitHub repository is a read-only mirror — it exists so Packagist has a public
-remote to read. Issues and pull requests opened there will not be seen. Please
-use the GitLab issue tracker linked from `composer.json`.
+- **Bugs and ideas:** issues on [GitHub](https://github.com/ohartwig/sylius-mcp-oauth/issues).
+- **Changes:** pull requests on GitHub. Development and the release pipeline
+  run on the maintainer's GitLab; a pull request is reviewed on GitHub and
+  lands through the mirror, so a merge may take a day.
+- **Security problems:** see [SECURITY.md](SECURITY.md), never a public issue.
 
 ## Developer Certificate of Origin
 
@@ -27,7 +28,17 @@ that you wrote the patch or have the right to submit it under the project's lice
 
 `git commit -s` adds the line for you.
 
-## Before you open a merge request
+## Signed commits
+
+Commits must also carry a verifiable signature, SSH or GPG:
+
+```bash
+git config commit.gpgsign true
+```
+
+Unsigned commits are not merged.
+
+## Before you open a pull request
 
 ```bash
 composer install
@@ -36,7 +47,7 @@ vendor/bin/phpstan analyse
 composer validate --strict
 ```
 
-All four must pass. PHPStan runs at level 6 and the pipeline blocks on it.
+All four must pass. PHPStan runs at level 8 and the pipeline blocks on it.
 
 Every source file carries an SPDX header:
 

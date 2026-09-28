@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+# SPDX-License-Identifier: MIT
+#
+# GitHub copy of the review rule. The GitLab one lives in .gitlab/CODEOWNERS
+# and is managed by the repository-template sync.
+
+* @ohartwig
