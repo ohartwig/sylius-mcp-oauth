@@ -1,3 +1,13 @@
+## [2.0.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v2.0.0...v2.0.1) (2026-09-28)
+
+### :bug: Fixes
+
+* **deps:** update dependency symfony/translation-contracts to ^3.7.1 ([11a3aa8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/11a3aa84d5e0fe403bd4d3d3e5d92f705aa57a81))
+
+### :repeat: Continuous Integrations
+
+* mirror releases to GitHub and notify Packagist ([2aff0e6](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/2aff0e6d2dbd8d7ec8026b7016d99f0822b556ab))
+
 ## [2.0.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.31...v2.0.0) (2026-09-28)
 
 ### :boom: BREAKING CHANGES
