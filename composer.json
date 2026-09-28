@@ -44,7 +44,7 @@
         "symfony/security-bundle": "^7.4 || ^8.0",
         "symfony/security-core": "^7.4 || ^8.0",
         "symfony/security-http": "^7.4 || ^8.0",
-        "symfony/translation-contracts": "^3.5"
+        "symfony/translation-contracts": "^3.7.1"
     },
     "require-dev": {
         "moselwal/dev-sylius": "^1.0",
