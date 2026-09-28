@@ -13,6 +13,7 @@ use Koh\SyliusMcpOAuth\Controller\AuthorizeController;
 use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
 use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
+use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Psr\Container\ContainerInterface;
@@ -262,6 +263,88 @@ final class AuthorizeFlowTest extends TestCase
         self::assertStringContainsString('&code=', $response->getTargetUrl());
     }
 
+    /**
+     * THR-AGENT-014 at the authorize endpoint. A client registered before the
+     * allow-list was enforced — or before the operator removed its entry —
+     * still has the URI in its own record. That must no longer be enough to
+     * receive a code, and the refusal must not redirect to the URI either.
+     */
+    public function testARegisteredRedirectUriOffTheAllowListGetsAnOnSiteError(): void
+    {
+        $persisted = [];
+        $response = $this->authorize(
+            $this->postRequest(['decision' => 'approve']),
+            persisted: $persisted,
+            allowed: ['https://other.example/cb'],
+        );
+
+        self::assertNotInstanceOf(RedirectResponse::class, $response);
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        self::assertSame([], $persisted);
+        self::assertStringContainsString('invalid_request', (string) $response->getContent());
+        self::assertStringContainsString('allow-list', (string) $response->getContent());
+    }
+
+    public function testTheConsentScreenIsNotRenderedForARedirectUriOffTheAllowList(): void
+    {
+        $renderContext = null;
+        $response = $this->authorize($this->query(), renderContext: $renderContext, allowed: []);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        self::assertNull($renderContext);
+    }
+
+    public function testAMalformedCodeChallengeIsRefused(): void
+    {
+        // S256 yields 43 base64url characters; anything shorter cannot be a
+        // SHA-256 digest and would only ever fail later, at the token endpoint.
+        $response = $this->authorize($this->query(['code_challenge' => 'too-short']));
+
+        self::assertInstanceOf(RedirectResponse::class, $response);
+        self::assertStringContainsString('error=invalid_request', $response->getTargetUrl());
+    }
+
+    public function testDecliningCarriesTheStateBack(): void
+    {
+        $response = $this->authorize($this->postRequest(['decision' => 'deny', 'state' => 'xyz789']));
+
+        self::assertInstanceOf(RedirectResponse::class, $response);
+        self::assertStringContainsString('error=access_denied', $response->getTargetUrl());
+        self::assertStringContainsString('state=xyz789', $response->getTargetUrl());
+    }
+
+    /**
+     * THR-AGENT-021: the bundle ships its own consent template. Rendering a
+     * host-only name meant a fresh install failed with a Twig error.
+     */
+    public function testTheConsentScreenUsesTheBundledTemplate(): void
+    {
+        $renderedTemplate = null;
+        $renderContext = null;
+        $this->authorize($this->query(), renderContext: $renderContext, renderedTemplate: $renderedTemplate);
+
+        self::assertSame('@KohSyliusMcpOAuth/oauth/authorize.html.twig', $renderedTemplate);
+        self::assertIsArray($renderContext);
+        self::assertSame('koh_mcp_oauth', $renderContext['translation_domain']);
+        self::assertSame(self::REDIRECT_URI, $renderContext['redirect_uri']);
+    }
+
+    public function testTheConsentScreenCannotBeFramedOrCached(): void
+    {
+        $response = $this->authorize($this->query());
+
+        self::assertSame('DENY', $response->headers->get('X-Frame-Options'));
+        self::assertStringContainsString("frame-ancestors 'none'", (string) $response->headers->get('Content-Security-Policy'));
+        self::assertStringContainsString('no-store', (string) $response->headers->get('Cache-Control'));
+    }
+
+    public function testErrorPagesCannotBeFramedEither(): void
+    {
+        $response = $this->authorize($this->query(['client_id' => 'mcpc_unknown']), clientExists: false);
+
+        self::assertSame('DENY', $response->headers->get('X-Frame-Options'));
+    }
+
     // --- helpers -------------------------------------------------------------
 
     /**
@@ -304,6 +387,7 @@ final class AuthorizeFlowTest extends TestCase
     /**
      * @param array<object>             $persisted
      * @param array<string, mixed>|null $renderContext
+     * @param list<string>|null         $allowed       null = exactly the registered URI
      */
     private function authorize(
         Request $request,
@@ -314,6 +398,8 @@ final class AuthorizeFlowTest extends TestCase
         string $registeredRedirectUri = self::REDIRECT_URI,
         array &$persisted = [],
         ?array &$renderContext = null,
+        ?array $allowed = null,
+        ?string &$renderedTemplate = null,
     ): Response {
         $clients = $this->createStub(EntityRepository::class);
         $clients->method('findOneBy')->willReturn(
@@ -333,9 +419,13 @@ final class AuthorizeFlowTest extends TestCase
             $authenticated ? ($admin ?? $this->admin()) : null,
             $csrfValid,
             $renderContext,
+            $renderedTemplate,
         ));
 
-        return $controller($request, new OAuthServer($entityManager));
+        return $controller(
+            $request,
+            new OAuthServer($entityManager, null, new RedirectUriPolicy($allowed ?? [$registeredRedirectUri])),
+        );
     }
 
     private function admin(int $id = 99): AdminUserInterface
@@ -349,7 +439,12 @@ final class AuthorizeFlowTest extends TestCase
     }
 
     /** @param array<string, mixed>|null $renderContext */
-    private function container(?AdminUserInterface $admin, bool $csrfValid, ?array &$renderContext = null): ContainerInterface
+    private function container(
+        ?AdminUserInterface $admin,
+        bool $csrfValid,
+        ?array &$renderContext = null,
+        ?string &$renderedTemplate = null,
+    ): ContainerInterface
     {
         $tokenStorage = $this->createStub(TokenStorageInterface::class);
         if ($admin !== null) {
@@ -365,8 +460,9 @@ final class AuthorizeFlowTest extends TestCase
 
         $twig = $this->createStub(Environment::class);
         $twig->method('render')->willReturnCallback(
-            function (string $name, array $context) use (&$renderContext): string {
+            function (string $name, array $context) use (&$renderContext, &$renderedTemplate): string {
                 $renderContext = $context;
+                $renderedTemplate = $name;
 
                 return '<html>consent</html>';
             },

@@ -9,6 +9,7 @@ namespace Koh\SyliusMcpOAuth\Tests\Controller;
 
 use Koh\SyliusMcpOAuth\Controller\AuthorizeController;
 use PHPUnit\Framework\TestCase;
+use Symfony\Contracts\Translation\TranslatorInterface;
 
 /**
  * Scope parsing on the authorization endpoint.
@@ -85,18 +86,49 @@ final class AuthorizeControllerTest extends TestCase
      * The on-site error page, exercised directly: it is what an attacker-chosen
      * client_id or redirect_uri is shown instead of a redirect, so its exact
      * markup and headers are part of the open-redirect defence, not decoration.
+     *
+     * THR-AGENT-021: without a translator it speaks English, not German.
      */
-    public function testTheOnSiteErrorPageCarriesTheEscapedMessageAndAnHtmlContentType(): void
+    public function testTheOnSiteErrorPageIsEnglishByDefaultAndCarriesTheOAuthError(): void
     {
-        $response = self::error('Ungültiger client_id oder redirect_uri.');
+        $response = self::error(new AuthorizeController(), 'error.invalid_client', 'invalid_request');
+        $html = (string) $response->getContent();
 
-        self::assertSame(
-            '<!doctype html><meta charset="utf-8"><title>MCP-Autorisierung</title>'
-            . '<body style="font-family:system-ui;max-width:32rem;margin:4rem auto;padding:0 1rem">'
-            . '<h1>MCP-Autorisierung fehlgeschlagen</h1><p>Ungültiger client_id oder redirect_uri.</p></body>',
-            $response->getContent(),
-        );
+        self::assertSame(400, $response->getStatusCode());
         self::assertSame('text/html; charset=utf-8', $response->headers->get('Content-Type'));
+        self::assertStringContainsString('<html lang="en">', $html);
+        self::assertStringContainsString('<title>MCP authorisation failed</title>', $html);
+        self::assertStringContainsString(
+            '<p role="alert">Unknown client_id, or a redirect_uri this client has not registered.</p>',
+            $html,
+        );
+        self::assertStringContainsString('Error code: <code>invalid_request</code>', $html);
+        self::assertStringNotContainsString('Ungültig', $html);
+        self::assertStringNotContainsString('fehlgeschlagen', $html);
+    }
+
+    public function testTheOnSiteErrorPageIsTranslatedWhenATranslatorIsAvailable(): void
+    {
+        $translator = $this->createStub(TranslatorInterface::class);
+        $translator->method('getLocale')->willReturn('de_DE');
+        $translator->method('trans')->willReturnCallback(
+            static fn (string $id, array $parameters = [], ?string $domain = null): string => match (true) {
+                'koh_mcp_oauth' !== $domain => $id,
+                'error.title' === $id => 'MCP-Autorisierung fehlgeschlagen',
+                'error.not_signed_in' === $id => 'Kein Administrator <angemeldet>.',
+                default => $id,
+            },
+        );
+
+        $html = (string) self::error(new AuthorizeController($translator), 'error.not_signed_in', 'access_denied')->getContent();
+
+        self::assertStringContainsString('<html lang="de-DE">', $html);
+        self::assertStringContainsString('<title>MCP-Autorisierung fehlgeschlagen</title>', $html);
+        // Translations are escaped like any other text.
+        self::assertStringContainsString('Kein Administrator &lt;angemeldet&gt;.', $html);
+        // A key missing from the catalogue falls back to English, never to the key.
+        self::assertStringContainsString('Error code: <code>access_denied</code>', $html);
+        self::assertStringNotContainsString('error.code', $html);
     }
 
     /**
@@ -122,11 +154,11 @@ final class AuthorizeControllerTest extends TestCase
         return $scopes;
     }
 
-    private static function error(string $message): \Symfony\Component\HttpFoundation\Response
+    private static function error(AuthorizeController $controller, string $key, string $oauthError): \Symfony\Component\HttpFoundation\Response
     {
         /** @var \Symfony\Component\HttpFoundation\Response $response */
         $response = (new \ReflectionMethod(AuthorizeController::class, 'error'))
-            ->invoke(new AuthorizeController(), $message);
+            ->invoke($controller, $key, $oauthError);
 
         return $response;
     }

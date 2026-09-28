@@ -14,6 +14,7 @@ use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
 use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
 use Koh\SyliusMcpOAuth\OAuth\OAuthException;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
+use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 
@@ -54,7 +55,7 @@ final class CodeExchangeTest extends TestCase
         );
 
         try {
-            (new OAuthServer($entityManager))->consumeCode(
+            (new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI])))->consumeCode(
                 self::RAW_CODE,
                 self::CLIENT_ID,
                 self::REDIRECT_URI,
@@ -301,7 +302,7 @@ final class CodeExchangeTest extends TestCase
         $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
         $entityManager->expects(self::once())->method('flush');
 
-        (new OAuthServer($entityManager))->registerClient('My Client', [self::REDIRECT_URI]);
+        (new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI])))->registerClient('My Client', [self::REDIRECT_URI]);
     }
 
     /**
@@ -324,7 +325,7 @@ final class CodeExchangeTest extends TestCase
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('getRepository')->willReturn($clients);
 
-        $server = new OAuthServer($entityManager);
+        $server = new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI]));
 
         self::assertSame($wanted, $server->findClient(self::CLIENT_ID));
         self::assertNull($server->findClient('mcpc_unknown'));
@@ -405,7 +406,7 @@ final class CodeExchangeTest extends TestCase
         $entityManager->method('getRepository')->willReturn($this->createStub(EntityRepository::class));
         $entityManager->expects(self::once())->method('flush');
 
-        (new OAuthServer($entityManager))->issueCode(
+        (new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI])))->issueCode(
             new McpOAuthClient(self::CLIENT_ID, 'Client', [self::REDIRECT_URI]),
             adminUserId: 7,
             redirectUri: self::REDIRECT_URI,
@@ -524,6 +525,6 @@ final class CodeExchangeTest extends TestCase
             $entityManager->method('persist')->willReturnCallback($persistCallback);
         }
 
-        return new OAuthServer($entityManager);
+        return new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI]));
     }
 }

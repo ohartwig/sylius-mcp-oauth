@@ -24,9 +24,6 @@ final class OAuthServer
     /** Authorization codes are short-lived (seconds). */
     private const CODE_TTL = 300;
 
-    /** OAuth-issued access tokens live 90 days (revocable in the admin UI). */
-    public const TOKEN_TTL_DAYS = 90;
-
     public const SUPPORTED_SCOPES = ['mcp'];
 
     /** @var EntityRepository<McpOAuthClient> */
@@ -38,13 +35,16 @@ final class OAuthServer
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
         private readonly ?LoggerInterface $logger = null,
+        private readonly RedirectUriPolicy $redirectUris = new RedirectUriPolicy(),
     ) {
         $this->clients = $entityManager->getRepository(McpOAuthClient::class);
         $this->codes = $entityManager->getRepository(McpAuthorizationCode::class);
     }
 
     /**
-     * Register a public client (RFC 7591). Only PKCE public clients are allowed.
+     * Register a public client (RFC 7591). Only PKCE public clients are allowed,
+     * and every redirect URI must be on the operator's allow-list
+     * ({@see RedirectUriPolicy}); one refused URI refuses the registration.
      *
      * @param list<string> $redirectUris
      */
@@ -54,7 +54,7 @@ final class OAuthServer
             throw new OAuthException('invalid_client_metadata', 'At least one redirect_uri is required.');
         }
         foreach ($redirectUris as $uri) {
-            self::assertUsableRedirectUri($uri);
+            $this->redirectUris->assertRegistrable($uri);
         }
 
         $client = new McpOAuthClient(
@@ -67,6 +67,16 @@ final class OAuthServer
         $this->entityManager->flush();
 
         return $client;
+    }
+
+    /**
+     * Re-checked at /authorize, not only at registration: a client registered
+     * before the allow-list was enforced, or before an entry was removed from
+     * it, must not keep receiving codes at a URI the operator no longer allows.
+     */
+    public function isRedirectUriAllowed(string $uri): bool
+    {
+        return $this->redirectUris->isAllowed($uri);
     }
 
     public function findClient(string $clientId): ?McpOAuthClient
@@ -176,65 +186,6 @@ final class OAuthServer
         $code->markUsed();
 
         return ['admin_user_id' => $code->getAdminUserId(), 'scopes' => $code->getScopes(), 'client' => $client];
-    }
-
-    /**
-     * OAuth 2.1 §2.3.1 / RFC 8252 §7: a redirect URI is https, http on the
-     * loopback interface, or a private-use scheme.
-     *
-     * FILTER_VALIDATE_URL is not a substitute. It accepts `javascript://x%0a…`,
-     * `file:///etc/passwd` and `ftp://…` — and since registration is open by
-     * design (public clients, no secret), anyone could register a client whose
-     * redirect target is one of those and get it echoed into a Location header.
-     *
-     * A fragment is rejected outright: RFC 6749 §3.1.2 forbids it, and the
-     * authorization response appends its own query, which a fragment would
-     * swallow.
-     */
-    private static function assertUsableRedirectUri(string $uri): void
-    {
-        $parts = parse_url($uri);
-        if ($parts === false || !isset($parts['scheme'])) {
-            throw new OAuthException('invalid_redirect_uri', 'redirect_uri is not a valid URL.');
-        }
-        if (isset($parts['fragment'])) {
-            throw new OAuthException('invalid_redirect_uri', 'redirect_uri must not contain a fragment.');
-        }
-
-        $scheme = strtolower($parts['scheme']);
-        $host = strtolower($parts['host'] ?? '');
-
-        if ($scheme === 'https') {
-            if ($host === '') {
-                throw new OAuthException('invalid_redirect_uri', 'redirect_uri must name a host.');
-            }
-
-            return;
-        }
-
-        if ($scheme === 'http') {
-            // RFC 8252 §7.3: loopback only, and only for native clients.
-            if (\in_array($host, ['127.0.0.1', '::1', '[::1]', 'localhost'], true)) {
-                return;
-            }
-
-            throw new OAuthException(
-                'invalid_redirect_uri',
-                'Plain http is only allowed on the loopback interface; use https.',
-            );
-        }
-
-        // RFC 8252 §7.1: a private-use scheme is a reverse-domain name, so it
-        // always contains a dot. That excludes javascript:, data:, file: and ftp:
-        // without needing to enumerate them.
-        if (str_contains($scheme, '.')) {
-            return;
-        }
-
-        throw new OAuthException(
-            'invalid_redirect_uri',
-            \sprintf('Scheme "%s" is not allowed for a redirect_uri.', $scheme),
-        );
     }
 
     /** PKCE S256 (RFC 7636): base64url(sha256(verifier)) == stored challenge. */
