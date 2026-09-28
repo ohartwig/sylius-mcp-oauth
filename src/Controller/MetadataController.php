@@ -1,6 +1,6 @@
 <?php
 
-// SPDX-FileCopyrightText: 2026 Kai Ole Hartwig
+// SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
 // SPDX-License-Identifier: MIT
 
 declare(strict_types=1);
