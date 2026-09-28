@@ -7,6 +7,8 @@ declare(strict_types=1);
 
 namespace Koh\SyliusMcpOAuth;
 
+use Koh\SyliusMcpOAuth\OAuth\OAuthException;
+use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -62,11 +64,28 @@ final class KohSyliusMcpOAuthBundle extends AbstractBundle
                 ->end()
                 ->integerNode('access_token_ttl')
                     ->defaultValue(3600)
-                    ->info('Access token lifetime in seconds.')
+                    ->min(60)
+                    ->info('Lifetime in seconds of access tokens issued through the OAuth flow. No refresh token is issued; the client re-authorises when it expires.')
                 ->end()
                 ->arrayNode('allowed_redirect_uris')
-                    ->info('HTTPS redirect URIs accepted at registration in addition to loopback (RFC 8252).')
-                    ->scalarPrototype()->end()
+                    ->info('Redirect URIs a client may register, compared as exact strings. For http on 127.0.0.1, [::1] or localhost the port is ignored (RFC 8252 §7.3). Empty allows no client to register.')
+                    ->scalarPrototype()
+                        ->validate()
+                            ->ifTrue(static function (mixed $uri): bool {
+                                if (!\is_string($uri)) {
+                                    return true;
+                                }
+                                try {
+                                    RedirectUriPolicy::assertWellFormed($uri);
+                                } catch (OAuthException) {
+                                    return true;
+                                }
+
+                                return false;
+                            })
+                            ->thenInvalid('%s is not a usable redirect URI: use https, http on a loopback host, or a private-use scheme, without a fragment.')
+                        ->end()
+                    ->end()
                     ->defaultValue([])
                 ->end()
             ->end();

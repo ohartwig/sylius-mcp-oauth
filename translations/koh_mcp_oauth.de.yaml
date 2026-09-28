@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+# SPDX-License-Identifier: MIT
+consent:
+    title: 'MCP-Zugriff autorisieren'
+    intro: '%client% möchte in deinem Namen auf den MCP-Server dieses Shops zugreifen.'
+    client: 'Client'
+    redirect_uri: 'Danach geht es zurück zu'
+    signed_in_as: 'Angemeldet als'
+    scopes: 'Angefragter Zugriff'
+    scope:
+        mcp: 'Shop über MCP verwalten (Produkte, Inhalte, Bestellungen)'
+    warning: 'Der Client handelt mit deinen Rechten, bis das Token abläuft oder du es widerrufst. Autorisiere nur Clients, die du selbst gestartet hast.'
+    approve: 'Autorisieren'
+    deny: 'Ablehnen'
+error:
+    title: 'MCP-Autorisierung fehlgeschlagen'
+    invalid_client: 'Unbekannte client_id oder eine redirect_uri, die dieser Client nicht registriert hat.'
+    redirect_uri_not_allowed: 'Diese redirect_uri steht nicht auf der Allow-List dieses Servers. Der Betreiber muss sie in koh_mcp_oauth.allowed_redirect_uris eintragen.'
+    not_signed_in: 'Kein Administrator angemeldet.'
+    invalid_csrf: 'Das Zustimmungsformular ist abgelaufen oder ungültig. Bitte im MCP-Client neu starten.'
+    code: 'Fehlercode'

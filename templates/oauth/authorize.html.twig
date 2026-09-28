@@ -1,0 +1,82 @@
+{#
+SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+SPDX-License-Identifier: MIT
+
+Default MCP consent screen. Override it at
+templates/bundles/KohSyliusMcpOAuthBundle/oauth/authorize.html.twig.
+
+An override must keep three things, or the flow breaks or loses its defences:
+  - the POST to path('mcp_oauth_authorize'),
+  - the _csrf_token field built from csrf_token(csrf_id),
+  - every entry of `query` as a hidden field.
+#}
+{% trans_default_domain translation_domain %}
+<!doctype html>
+<html lang="{{ app.request.locale|default('en')|replace({'_': '-'}) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ 'consent.title'|trans }}</title>
+    <style>
+        :root { color-scheme: light dark; --bg: #f5f5f4; --card: #ffffff; --text: #1c1917; --muted: #44403c;
+                --line: #d6d3d1; --accent: #1d4ed8; --accent-text: #ffffff; --focus: #b45309; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #1c1917; --card: #292524; --text: #f5f5f4; --muted: #d6d3d1;
+                    --line: #57534e; --accent: #93c5fd; --accent-text: #0c0a09; --focus: #fbbf24; }
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 1rem/1.5 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+        main { max-width: 32rem; margin: 3rem auto; padding: 2rem 1.5rem; background: var(--card);
+               border: 1px solid var(--line); border-radius: .75rem; }
+        h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
+        h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+        p, dd { color: var(--muted); }
+        dl { margin: 0; }
+        dt { font-weight: 600; margin-top: .75rem; }
+        dd { margin: 0; overflow-wrap: anywhere; }
+        ul { margin: 0; padding-left: 1.25rem; }
+        .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+        button { flex: 1 1 10rem; min-height: 2.75rem; padding: .6rem 1rem; font: inherit; font-weight: 600;
+                 border-radius: .5rem; cursor: pointer; border: 1px solid var(--accent); }
+        .approve { background: var(--accent); color: var(--accent-text); }
+        .deny { background: transparent; color: var(--text); border-color: var(--line); }
+        button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    </style>
+</head>
+<body>
+<main aria-labelledby="consent-title">
+    <h1 id="consent-title">{{ 'consent.title'|trans }}</h1>
+    <p>{{ 'consent.intro'|trans({'%client%': client.clientName}) }}</p>
+
+    <dl>
+        <dt>{{ 'consent.client'|trans }}</dt>
+        <dd>{{ client.clientName }} (<code>{{ client.clientId }}</code>)</dd>
+        <dt>{{ 'consent.redirect_uri'|trans }}</dt>
+        <dd><code>{{ redirect_uri }}</code></dd>
+        <dt>{{ 'consent.signed_in_as'|trans }}</dt>
+        <dd>{{ admin_label }}</dd>
+    </dl>
+
+    <h2 id="consent-scopes">{{ 'consent.scopes'|trans }}</h2>
+    <ul aria-labelledby="consent-scopes">
+        {% for scope in scopes %}
+            <li>{{ ('consent.scope.' ~ scope)|trans }}</li>
+        {% endfor %}
+    </ul>
+
+    <p>{{ 'consent.warning'|trans }}</p>
+
+    <form method="post" action="{{ path('mcp_oauth_authorize') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token(csrf_id) }}">
+        {% for key, value in query %}
+            <input type="hidden" name="{{ key }}" value="{{ value }}">
+        {% endfor %}
+        <div class="actions">
+            <button type="submit" name="decision" value="deny" class="deny">{{ 'consent.deny'|trans }}</button>
+            <button type="submit" name="decision" value="approve" class="approve">{{ 'consent.approve'|trans }}</button>
+        </div>
+    </form>
+</main>
+</body>
+</html>

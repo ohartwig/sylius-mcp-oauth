@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+# SPDX-License-Identifier: MIT
+consent:
+    title: 'Authorise MCP access'
+    intro: '%client% wants to access this shop''s MCP server on your behalf.'
+    client: 'Client'
+    redirect_uri: 'You will be returned to'
+    signed_in_as: 'Signed in as'
+    scopes: 'Requested access'
+    scope:
+        mcp: 'Manage the shop through MCP (products, content, orders)'
+    warning: 'The client acts with your permissions until the token expires or you revoke it. Only authorise clients you started yourself.'
+    approve: 'Authorise'
+    deny: 'Deny'
+error:
+    title: 'MCP authorisation failed'
+    invalid_client: 'Unknown client_id, or a redirect_uri this client has not registered.'
+    redirect_uri_not_allowed: 'This redirect_uri is not on the allow-list of this server. Ask the operator to add it to koh_mcp_oauth.allowed_redirect_uris.'
+    not_signed_in: 'No administrator is signed in.'
+    invalid_csrf: 'The consent form has expired or is invalid. Please start again from your MCP client.'
+    code: 'Error code'

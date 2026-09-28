@@ -19,9 +19,25 @@ use Symfony\Component\HttpFoundation\Response;
  * OAuth token endpoint (RFC 6749 §4.1.3). Exchanges an authorization code +
  * PKCE verifier for an MCP access token bound to the admin user who consented.
  * Public clients only, so no client authentication — PKCE is the proof.
+ *
+ * The token lives `koh_mcp_oauth.access_token_ttl` seconds, and `expires_in`
+ * says exactly that: a client caches the token for expires_in, so the two must
+ * never disagree. No refresh token is issued; when the token expires the client
+ * runs the authorization flow again.
  */
 final class TokenController extends AbstractController
 {
+    /** Matches the bundle configuration default. */
+    public const DEFAULT_ACCESS_TOKEN_TTL = 3600;
+
+    public function __construct(
+        private readonly int $accessTokenTtl = self::DEFAULT_ACCESS_TOKEN_TTL,
+    ) {
+        if ($accessTokenTtl < 1) {
+            throw new \InvalidArgumentException('access_token_ttl must be a positive number of seconds.');
+        }
+    }
+
     public function __invoke(Request $request, OAuthServer $server, AccessTokenManager $tokens): JsonResponse
     {
         $grantType = (string) $request->request->get('grant_type', '');
@@ -40,7 +56,7 @@ final class TokenController extends AbstractController
             return $this->fail($e->error, $e->getMessage());
         }
 
-        $expiresAt = (new \DateTimeImmutable())->modify(sprintf('+%d days', OAuthServer::TOKEN_TTL_DAYS));
+        $expiresAt = (new \DateTimeImmutable())->modify(\sprintf('+%d seconds', $this->accessTokenTtl));
 
         $result = $tokens->create(
             adminUserId: $payload['admin_user_id'],
@@ -53,7 +69,7 @@ final class TokenController extends AbstractController
         return $this->cors(new JsonResponse([
             'access_token' => $result['token'],
             'token_type' => 'Bearer',
-            'expires_in' => OAuthServer::TOKEN_TTL_DAYS * 86400,
+            'expires_in' => $this->accessTokenTtl,
             'scope' => implode(' ', $payload['scopes']),
         ]));
     }

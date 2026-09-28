@@ -18,6 +18,7 @@ use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
 use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
+use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\TestCase;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -53,14 +54,66 @@ final class OAuthEndpointsTest extends TestCase
         self::assertSame('mcp', $body['scope']);
     }
 
-    public function testTheAdvertisedLifetimeMatchesTheTokenTtl(): void
+    public function testTheDefaultLifetimeIsTheDocumentedHour(): void
+    {
+        // THR-AGENT-020: the documented default was 3600 s while tokens
+        // actually lived 90 days.
+        $body = $this->body($this->token($this->tokenRequest()));
+
+        self::assertSame(3600, $body['expires_in']);
+    }
+
+    public function testTheConfiguredLifetimeIsAdvertisedAndStored(): void
     {
         // A client caches the token for expires_in seconds. If that disagrees
         // with the stored expiry, the client keeps using a token the server has
-        // already stopped accepting.
-        $body = $this->body($this->token($this->tokenRequest()));
+        // already stopped accepting — or the server honours one far longer
+        // than anyone configured.
+        $persisted = null;
+        $before = new \DateTimeImmutable();
+        $response = $this->token(
+            $this->tokenRequest(),
+            function (object $entity) use (&$persisted): void {
+                if ($entity instanceof McpAccessToken) {
+                    $persisted = $entity;
+                }
+            },
+            accessTokenTtl: 900,
+        );
+        $after = new \DateTimeImmutable();
 
-        self::assertSame(OAuthServer::TOKEN_TTL_DAYS * 86400, $body['expires_in']);
+        self::assertSame(900, $this->body($response)['expires_in']);
+        self::assertInstanceOf(McpAccessToken::class, $persisted);
+
+        $expiresAt = $persisted->getExpiresAt();
+        self::assertNotNull($expiresAt);
+        self::assertGreaterThanOrEqual($before->modify('+900 seconds')->getTimestamp(), $expiresAt->getTimestamp());
+        self::assertLessThanOrEqual($after->modify('+900 seconds')->getTimestamp(), $expiresAt->getTimestamp());
+    }
+
+    public function testATokenPastItsConfiguredLifetimeIsNoLongerValid(): void
+    {
+        $persisted = null;
+        $this->token(
+            $this->tokenRequest(),
+            function (object $entity) use (&$persisted): void {
+                if ($entity instanceof McpAccessToken) {
+                    $persisted = $entity;
+                }
+            },
+            accessTokenTtl: 60,
+        );
+
+        self::assertInstanceOf(McpAccessToken::class, $persisted);
+        self::assertTrue($persisted->isValid(new \DateTimeImmutable('+30 seconds')));
+        self::assertFalse($persisted->isValid(new \DateTimeImmutable('+61 seconds')));
+    }
+
+    public function testANonPositiveLifetimeIsRefusedAtConstruction(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        new TokenController(0);
     }
 
     public function testAnUnsupportedGrantTypeIsRefusedWithoutTouchingTheCode(): void
@@ -201,6 +254,22 @@ final class OAuthEndpointsTest extends TestCase
         self::assertSame('invalid_redirect_uri', $this->body($response)['error']);
     }
 
+    public function testRegistrationRefusesAWellFormedUriThatIsNotAllowListed(): void
+    {
+        // THR-AGENT-014: consent phishing needs nothing more than a client whose
+        // HTTPS redirect points at the attacker. The response must be the RFC
+        // 7591 error, not a client_id.
+        $response = $this->register([
+            'client_name' => 'Looks Legit',
+            'redirect_uris' => ['https://attacker.example/cb'],
+        ]);
+
+        self::assertSame(Response::HTTP_BAD_REQUEST, $response->getStatusCode());
+        $body = $this->body($response);
+        self::assertSame('invalid_redirect_uri', $body['error']);
+        self::assertArrayNotHasKey('client_id', $body);
+    }
+
     public function testRegistrationRefusesABodyWithNoRedirectUris(): void
     {
         $response = $this->register(['client_name' => 'My Client']);
@@ -324,13 +393,14 @@ final class OAuthEndpointsTest extends TestCase
         ], $overrides));
     }
 
-    private function token(Request $request, ?\Closure $persistCallback = null): JsonResponse
+    private function token(Request $request, ?\Closure $persistCallback = null, ?int $accessTokenTtl = null): JsonResponse
     {
         $entityManager = $this->entityManager($persistCallback);
+        $controller = null === $accessTokenTtl ? new TokenController() : new TokenController($accessTokenTtl);
 
-        return (new TokenController())(
+        return $controller(
             $request,
-            new OAuthServer($entityManager),
+            new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI])),
             new AccessTokenManager($entityManager),
         );
     }
@@ -347,7 +417,7 @@ final class OAuthEndpointsTest extends TestCase
     {
         return (new RegisterController())(
             new Request(content: $content),
-            new OAuthServer($this->entityManager()),
+            new OAuthServer($this->entityManager(), null, new RedirectUriPolicy([self::REDIRECT_URI])),
         );
     }
 

@@ -18,6 +18,7 @@ use Koh\SyliusMcpOAuth\Controller\RevokeController;
 use Koh\SyliusMcpOAuth\Controller\TokenController;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
+use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
@@ -29,6 +30,9 @@ return static function (ContainerConfigurator $container): void {
         ->defaults()
         ->autowire()
         ->autoconfigure();
+
+    $services->set(RedirectUriPolicy::class)
+        ->args([param('koh_mcp_oauth.allowed_redirect_uris')]);
 
     $services->set(OAuthServer::class)->public();
     $services->set(AccessTokenManager::class)->public();
@@ -48,7 +52,12 @@ return static function (ContainerConfigurator $container): void {
         ->public()
         ->tag('controller.service_arguments');
 
-    foreach ([AuthorizeController::class, RegisterController::class, TokenController::class, RevokeController::class] as $controller) {
+    $services->set(TokenController::class)
+        ->arg('$accessTokenTtl', param('koh_mcp_oauth.access_token_ttl'))
+        ->public()
+        ->tag('controller.service_arguments');
+
+    foreach ([AuthorizeController::class, RegisterController::class, RevokeController::class] as $controller) {
         $services->set($controller)
             ->public()
             ->tag('controller.service_arguments');
