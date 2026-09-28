@@ -1,3 +1,13 @@
+## [2.0.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.31...v2.0.0) (2026-09-28)
+
+### :boom: BREAKING CHANGES
+
+* with the default allowed_redirect_uris of [] every client registration is refused, loopback included, and clients registered under 1.x cannot authorise until their redirect URI is listed. OAuth access tokens now expire after access_token_ttl seconds (default one hour) instead of 90 days, with no refresh token. CLI tokens expire after 90 days unless created with --no-expiry. The consent screen renders @KohSyliusMcpOAuth/oauth/authorize.html.twig instead of the application's mcp/oauth/authorize.html.twig. OAuthServer::TOKEN_TTL_DAYS is removed. See "Upgrading to 2.0" in the README.
+
+### :sparkles: Features
+
+* enforce redirect allow-list, token lifetimes and ship the consent screen ([979aae1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/979aae168085d045159dea6017d618e5e7a2e888))
+
 ## [1.2.31](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.30...v1.2.31) (2026-09-28)
 
 ### :memo: Documentation
