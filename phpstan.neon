@@ -1,5 +1,5 @@
 includes:
-    - vendor/moselwal/dev-sylius/config/sylius/phpstan.neon
+    - vendor/koh/dev-sylius/config/sylius/phpstan.neon
 
 parameters:
     paths:
