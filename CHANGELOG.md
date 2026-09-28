@@ -1,3 +1,15 @@
+## [1.2.31](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.30...v1.2.31) (2026-09-28)
+
+### :memo: Documentation
+
+* link the family threat model from the README ([1c7677c](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/1c7677c098cd4ffbcf1c8c632a7b55dbc963fd6b))
+* point project metadata and contribution paths at GitHub ([28a4959](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/28a49592139850baf0f1af703307a926ad56bbb3))
+
+### :repeat: Chores
+
+* **reuse:** cover the template-synced .mise.toml and signing key ([8779f8e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/8779f8e6fbf2f489989300ddaad8eaf61a03675a))
+* **license:** name the copyright holder with a contact address ([f8b6f16](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/f8b6f164b03a7a849e0e31337c47528ec6c3fbaa))
+
 ## [1.2.30](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v1.2.29...v1.2.30) (2026-09-26)
 
 ### :repeat: Chores
