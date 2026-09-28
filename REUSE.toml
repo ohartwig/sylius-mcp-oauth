@@ -21,6 +21,8 @@ path = [
     "SECURITY.md",
     ".well-known/security.txt",
     ".gitlab/**",
+    ".mise.toml",
+    ".gitsigners.d/**",
 ]
 precedence = "aggregate"
 SPDX-FileCopyrightText = "2026 Kai Ole Hartwig <mail@ole-hartwig.eu>"
