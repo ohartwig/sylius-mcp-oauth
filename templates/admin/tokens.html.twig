@@ -1,0 +1,74 @@
+{#
+SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+SPDX-License-Identifier: MIT
+
+MCP token overview. Override it at
+templates/bundles/KohSyliusMcpOAuthBundle/admin/tokens.html.twig; keep the
+POST to path('mcp_oauth_admin_token_revoke') with the _token field.
+#}
+{% extends '@SyliusAdmin/shared/layout/base.html.twig' %}
+{% trans_default_domain translation_domain %}
+
+{% block title %}{{ 'admin.tokens.title'|trans }} | {{ parent() }}{% endblock %}
+
+{% block body %}
+<div class="page-wrapper">
+    <div class="page-header d-print-none">
+        <div class="container-xl">
+            <a href="{{ path('sylius_admin_dashboard') }}">&larr; {{ 'admin.tokens.back'|trans }}</a>
+            <h1 class="page-title mt-2">{{ 'admin.tokens.title'|trans }}</h1>
+            <p class="text-secondary">{{ 'admin.tokens.intro'|trans }}</p>
+        </div>
+    </div>
+    <div class="page-body">
+        <div class="container-xl">
+            {% for message in app.flashes('success') %}
+                <div class="alert alert-success" role="status">{{ message|trans }}</div>
+            {% endfor %}
+            <div class="card">
+                <div class="table-responsive">
+                    <table class="table table-vcenter card-table">
+                        <thead>
+                            <tr>
+                                <th scope="col">{{ 'admin.tokens.owner'|trans }}</th>
+                                <th scope="col">{{ 'admin.tokens.client'|trans }}</th>
+                                <th scope="col">{{ 'admin.tokens.scopes'|trans }}</th>
+                                <th scope="col">{{ 'admin.tokens.created'|trans }}</th>
+                                <th scope="col">{{ 'admin.tokens.last_used'|trans }}</th>
+                                <th scope="col">{{ 'admin.tokens.expires'|trans }}</th>
+                                <th scope="col">{{ 'admin.tokens.status'|trans }}</th>
+                                <th scope="col"><span class="visually-hidden">{{ 'admin.tokens.actions'|trans }}</span></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for row in tokens %}
+                            {% set token = row.token %}
+                            <tr>
+                                <td>{{ row.owner }}</td>
+                                <td>{{ row.client ?? ('admin.tokens.cli'|trans) }}<div class="text-secondary small">{{ token.name }}</div></td>
+                                <td><code>{{ token.scopes|join(' ') }}</code></td>
+                                <td>{{ token.createdAt|date('Y-m-d H:i') }}<div class="text-secondary small">{{ token.createdIp ?? '' }}</div></td>
+                                <td>{{ token.lastUsedAt ? token.lastUsedAt|date('Y-m-d H:i') : '—' }}<div class="text-secondary small">{{ token.lastUsedIp ?? '' }}</div></td>
+                                <td>{{ token.expiresAt ? token.expiresAt|date('Y-m-d H:i') : ('admin.tokens.never'|trans) }}</td>
+                                <td><span class="badge {{ row.status == 'active' ? 'bg-green-lt' : 'bg-secondary-lt' }}">{{ ('admin.tokens.status_' ~ row.status)|trans }}</span></td>
+                                <td class="text-end">
+                                    {% if row.status == 'active' %}
+                                        <form method="post" action="{{ path('mcp_oauth_admin_token_revoke', {id: token.id}) }}"
+                                              onsubmit="return confirm({{ ('admin.tokens.confirm'|trans)|json_encode }});">
+                                            <input type="hidden" name="_token" value="{{ csrf_token('mcp_token_revoke_' ~ token.id) }}">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm">{{ 'admin.tokens.revoke'|trans }}</button>
+                                        </form>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% else %}
+                            <tr><td colspan="8" class="text-center text-secondary">{{ 'admin.tokens.empty'|trans }}</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

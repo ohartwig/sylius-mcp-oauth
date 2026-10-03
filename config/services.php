@@ -8,6 +8,8 @@ declare(strict_types=1);
 use Koh\SyliusAgentContracts\Context\AgentContextFactoryInterface;
 use Koh\SyliusAgentContracts\Http\AgentJsonResponder;
 use Koh\SyliusAgentContracts\Registry\AuthMethodRegistry;
+use Koh\SyliusMcpOAuth\Admin\AdminMenuListener;
+use Koh\SyliusMcpOAuth\Admin\TokenAdminController;
 use Koh\SyliusMcpOAuth\Agent\OAuthAuthMethodDescriptor;
 use Koh\SyliusMcpOAuth\Agent\OAuthEndpointProvider;
 use Koh\SyliusMcpOAuth\Command\CreateMcpTokenCommand;
@@ -25,6 +27,7 @@ use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use Koh\SyliusMcpOAuth\OAuth\RefreshTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
 use Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator;
+use Sylius\Bundle\UiBundle\Menu\Event\MenuBuilderEvent;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
 
 use function Symfony\Component\DependencyInjection\Loader\Configurator\param;
@@ -107,6 +110,23 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$corsPolicy', service(CorsPolicy::class))
         ->public()
         ->tag('controller.service_arguments');
+
+    $services->set(TokenAdminController::class)
+        ->args([
+            service(AccessTokenManager::class),
+            service(OAuthServer::class),
+            service('sylius.repository.admin_user'),
+            service(RefreshTokenManager::class),
+            param('koh_mcp_oauth.admin.overview_role'),
+        ])
+        ->public()
+        ->tag('controller.service_arguments');
+
+    if (class_exists(MenuBuilderEvent::class)) {
+        $services->set(AdminMenuListener::class)
+            ->args([param('koh_mcp_oauth.admin.menu')])
+            ->tag('kernel.event_listener', ['event' => 'sylius.menu.admin.main']);
+    }
 
     $services->set(OAuthAuthMethodDescriptor::class)
         ->tag('koh_agent.auth_method');

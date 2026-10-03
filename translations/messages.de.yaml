@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+# SPDX-License-Identifier: MIT
+# The admin sidebar translates menu labels in the default domain.
+koh_mcp_oauth:
+    admin:
+        tokens:
+            menu: 'MCP-Tokens'
