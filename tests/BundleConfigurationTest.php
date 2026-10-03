@@ -33,6 +33,53 @@ final class BundleConfigurationTest extends TestCase
 
         self::assertSame(3600, $config['access_token_ttl']);
         self::assertSame([], $config['allowed_redirect_uris']);
+        self::assertSame(1209600, $config['refresh_token_ttl']);
+        self::assertSame(['mcp'], $config['default_scopes']);
+        self::assertSame([], $config['cors_allowed_origins'], 'no browser origin is trusted by default');
+        self::assertSame(['limit' => 10, 'interval' => '1 hour'], $config['rate_limits']['register']);
+        self::assertSame(['limit' => 30, 'interval' => '1 minute'], $config['rate_limits']['token']);
+    }
+
+    public function testAnUnknownDefaultScopeFailsTheBuild(): void
+    {
+        $this->expectException(InvalidConfigurationException::class);
+
+        $this->process(['default_scopes' => ['admin']]);
+    }
+
+    /** The bundle's own migrations are found without a doctrine_migrations.yaml edit. */
+    public function testTheMigrationsPathIsPrepended(): void
+    {
+        $container = new ContainerBuilder();
+        $container->setParameter('kernel.environment', 'test');
+        $container->setParameter('kernel.build_dir', sys_get_temp_dir());
+        $container->registerExtension(new class extends \Symfony\Component\DependencyInjection\Extension\Extension {
+            public function load(array $configs, ContainerBuilder $container): void
+            {
+            }
+
+            public function getAlias(): string
+            {
+                return 'doctrine_migrations';
+            }
+        });
+        $container->registerExtension(new class extends \Symfony\Component\DependencyInjection\Extension\Extension {
+            public function load(array $configs, ContainerBuilder $container): void
+            {
+            }
+
+            public function getAlias(): string
+            {
+                return 'doctrine';
+            }
+        });
+        $extension = $this->extension();
+        self::assertInstanceOf(\Symfony\Component\DependencyInjection\Extension\PrependExtensionInterface::class, $extension);
+        $extension->prepend($container);
+
+        $paths = $container->getExtensionConfig('doctrine_migrations')[0]['migrations_paths'] ?? [];
+        self::assertArrayHasKey('Koh\\SyliusMcpOAuth\\Migrations', $paths);
+        self::assertDirectoryExists($paths['Koh\\SyliusMcpOAuth\\Migrations']);
     }
 
     public function testATtlBelowAMinuteIsRefused(): void

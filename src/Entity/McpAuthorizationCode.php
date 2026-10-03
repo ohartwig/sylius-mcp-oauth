@@ -72,6 +72,10 @@ class McpAuthorizationCode
     #[ORM\Column(name: 'created_at', type: 'datetime_immutable')]
     private \DateTimeImmutable $createdAt;
 
+    /** RFC 8707 resource the authorization was requested for. */
+    #[ORM\Column(type: 'string', length: 512, nullable: true)]
+    private ?string $resource = null;
+
     /** @param list<string> $scopes */
     public function __construct(
         string $codeHash,
@@ -82,7 +86,9 @@ class McpAuthorizationCode
         string $codeChallenge,
         string $codeChallengeMethod,
         \DateTimeImmutable $expiresAt,
+        ?string $resource = null,
     ) {
+        $this->resource = $resource;
         $this->codeHash = $codeHash;
         $this->clientId = $clientId;
         $this->adminUserId = $adminUserId;
@@ -128,6 +134,11 @@ class McpAuthorizationCode
     public function getCodeChallengeMethod(): string
     {
         return $this->codeChallengeMethod;
+    }
+
+    public function getResource(): ?string
+    {
+        return $this->resource;
     }
 
     public function isUsable(?\DateTimeImmutable $now = null): bool

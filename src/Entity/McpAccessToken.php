@@ -20,6 +20,7 @@ use Doctrine\ORM\Mapping as ORM;
 #[ORM\Entity]
 #[ORM\Table(name: 'app_mcp_access_token')]
 #[ORM\Index(name: 'idx_mcp_token_admin', columns: ['admin_user_id'])]
+#[ORM\Index(name: 'idx_mcp_token_family', columns: ['refresh_family'])]
 /*
  * The unique index is declared here, under the name the migration created,
  * rather than as `unique: true` on the field. Doctrine derives a hashed
@@ -69,6 +70,24 @@ class McpAccessToken
     #[ORM\Column(type: 'boolean')]
     private bool $revoked = false;
 
+    /**
+     * RFC 8707: the resource (the MCP endpoint URL) this token was issued
+     * for. null for tokens from before audience binding and for CLI tokens.
+     */
+    #[ORM\Column(type: 'string', length: 512, nullable: true)]
+    private ?string $audience = null;
+
+    /** Refresh-token family this token was minted in; revoking the family revokes it. */
+    #[ORM\Column(name: 'refresh_family', type: 'string', length: 64, nullable: true)]
+    private ?string $refreshFamily = null;
+
+    /** Client address at issuance (token endpoint), and at the last use on /_mcp. */
+    #[ORM\Column(name: 'created_ip', type: 'string', length: 45, nullable: true)]
+    private ?string $createdIp = null;
+
+    #[ORM\Column(name: 'last_used_ip', type: 'string', length: 45, nullable: true)]
+    private ?string $lastUsedIp = null;
+
     /** @param list<string> $scopes */
     public function __construct(
         string $tokenHash,
@@ -77,6 +96,9 @@ class McpAccessToken
         array $scopes = ['mcp'],
         ?\DateTimeImmutable $expiresAt = null,
         ?string $clientId = null,
+        ?string $audience = null,
+        ?string $refreshFamily = null,
+        ?string $createdIp = null,
     ) {
         $this->tokenHash = $tokenHash;
         $this->adminUserId = $adminUserId;
@@ -84,7 +106,30 @@ class McpAccessToken
         $this->scopes = $scopes;
         $this->expiresAt = $expiresAt;
         $this->clientId = $clientId;
+        $this->audience = $audience;
+        $this->refreshFamily = $refreshFamily;
+        $this->createdIp = $createdIp;
         $this->createdAt = new \DateTimeImmutable();
+    }
+
+    public function getAudience(): ?string
+    {
+        return $this->audience;
+    }
+
+    public function getRefreshFamily(): ?string
+    {
+        return $this->refreshFamily;
+    }
+
+    public function getCreatedIp(): ?string
+    {
+        return $this->createdIp;
+    }
+
+    public function getLastUsedIp(): ?string
+    {
+        return $this->lastUsedIp;
     }
 
     public function getId(): ?int
@@ -128,9 +173,12 @@ class McpAccessToken
         return $this->lastUsedAt;
     }
 
-    public function touch(?\DateTimeImmutable $now = null): void
+    public function touch(?\DateTimeImmutable $now = null, ?string $ip = null): void
     {
         $this->lastUsedAt = $now ?? new \DateTimeImmutable();
+        if (null !== $ip) {
+            $this->lastUsedIp = $ip;
+        }
     }
 
     public function getExpiresAt(): ?\DateTimeImmutable

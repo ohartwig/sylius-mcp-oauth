@@ -11,7 +11,11 @@ use Doctrine\ORM\EntityManagerInterface;
 use Doctrine\ORM\EntityRepository;
 use Doctrine\Persistence\ObjectRepository;
 use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
+use Koh\SyliusAgentContracts\Context\AgentContext;
+use Koh\SyliusAgentContracts\Context\AgentContextFactoryInterface;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
+use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
+use Sylius\Component\Core\Model\ChannelInterface;
 use Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -206,7 +210,75 @@ final class McpAccessTokenAuthenticatorTest extends TestCase
         );
     }
 
+    /**
+     * RFC 8707: a token bound to another resource is refused, however valid
+     * it is otherwise.
+     */
+    public function testATokenForAnotherResourceIsRefused(): void
+    {
+        $token = new McpAccessToken(hash('sha256', self::RAW), 7, 'laptop', audience: 'https://other.example/_mcp');
+
+        $this->expectException(CustomUserMessageAuthenticationException::class);
+        $this->expectExceptionMessage('different resource');
+
+        $this->authenticator($this->knownToken($token), resource: $this->resource())->authenticate($this->bearerRequest());
+    }
+
+    public function testATokenForThisResourceIsAccepted(): void
+    {
+        $token = new McpAccessToken(hash('sha256', self::RAW), 7, 'laptop', audience: 'https://shop.example/_mcp');
+
+        $passport = $this->authenticator($this->knownToken($token), resource: $this->resource())->authenticate($this->bearerRequest());
+
+        self::assertSame('admin@example.test', $passport->getUser()->getUserIdentifier());
+    }
+
+    /** Tokens from before audience binding, and CLI tokens, carry none and keep working. */
+    public function testATokenWithoutAudienceIsAccepted(): void
+    {
+        $passport = $this->authenticator($this->knownToken(), resource: $this->resource())->authenticate($this->bearerRequest());
+
+        self::assertSame('admin@example.test', $passport->getUser()->getUserIdentifier());
+    }
+
+    /**
+     * The contract with koh/sylius-mcp: the scopes and the token's identity
+     * travel as security-token attributes under these exact names.
+     */
+    public function testTheTokenFactsBecomeSecurityTokenAttributes(): void
+    {
+        $token = new McpAccessToken(hash('sha256', self::RAW), 7, 'laptop', ['mcp:read'], clientId: 'mcpc_x', audience: null);
+        $authenticator = $this->authenticator($this->knownToken($token));
+
+        $securityToken = $authenticator->createToken($authenticator->authenticate($this->bearerRequest()), 'mcp');
+
+        self::assertSame(['mcp:read'], $securityToken->getAttribute('koh_mcp.scopes'));
+        self::assertSame('mcpc_x', $securityToken->getAttribute('koh_mcp.client_id'));
+        self::assertTrue($securityToken->hasAttribute('koh_mcp.token_id'));
+        self::assertTrue($securityToken->hasAttribute('koh_mcp.audience'));
+    }
+
+    public function testTheCallersAddressIsRecordedOnTheToken(): void
+    {
+        $token = $this->validToken();
+        $request = $this->bearerRequest();
+        $request->server->set('REMOTE_ADDR', '198.51.100.23');
+
+        $this->authenticator($this->knownToken($token))->authenticate($request);
+
+        self::assertSame('198.51.100.23', $token->getLastUsedIp());
+        self::assertNotNull($token->getLastUsedAt());
+    }
+
     // --- helpers -------------------------------------------------------------
+
+    private function resource(): ResourceIndicator
+    {
+        $factory = $this->createStub(AgentContextFactoryInterface::class);
+        $factory->method('create')->willReturn(new AgentContext($this->createStub(ChannelInterface::class), 'https://shop.example', 'en_US'));
+
+        return new ResourceIndicator($factory, '/_mcp');
+    }
 
     private const RAW = 'tbmcp_aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa';
 
@@ -274,10 +346,12 @@ final class McpAccessTokenAuthenticatorTest extends TestCase
         ?array $tokensByHash = null,
         ?AdminUserInterface $admin = null,
         bool $adminExists = true,
+        ?ResourceIndicator $resource = null,
     ): McpAccessTokenAuthenticator {
         return new McpAccessTokenAuthenticator(
             $this->manager($tokensByHash ?? []),
             $this->adminRepository($adminExists ? ($admin ?? $this->admin()) : null),
+            $resource,
         );
     }
 

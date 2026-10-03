@@ -206,6 +206,69 @@ final class AuthorizeFlowTest extends TestCase
         self::assertSame(self::CHALLENGE, $codes[0]->getCodeChallenge());
     }
 
+    /**
+     * RFC 8707: the code — and so the token — is bound to the MCP endpoint,
+     * also when the client did not name it.
+     */
+    public function testTheCodeIsBoundToTheResource(): void
+    {
+        foreach ([[], ['resource' => 'https://SHOP.example/_mcp/']] as $extra) {
+            $persisted = [];
+            $this->authorize($this->postRequest(['decision' => 'approve'] + $extra), persisted: $persisted, controller: $this->resourceAware());
+
+            $codes = array_values(array_filter($persisted, static fn (object $e): bool => $e instanceof McpAuthorizationCode));
+            self::assertCount(1, $codes);
+            self::assertNotNull($codes[0]->getResource());
+            self::assertStringEndsWith('/_mcp', rtrim((string) $codes[0]->getResource(), '/'));
+        }
+    }
+
+    /** A token for another server is not ours to issue. */
+    public function testAForeignResourceIsRefusedWithInvalidTarget(): void
+    {
+        $persisted = [];
+        $response = $this->authorize(
+            $this->postRequest(['decision' => 'approve', 'resource' => 'https://other.example/mcp']),
+            persisted: $persisted,
+            controller: $this->resourceAware(),
+        );
+
+        self::assertInstanceOf(RedirectResponse::class, $response);
+        self::assertStringContainsString('error=invalid_target', $response->getTargetUrl());
+        self::assertSame([], $persisted);
+    }
+
+    public function testTheDefaultScopesApplyWhenTheClientAsksForNone(): void
+    {
+        $persisted = [];
+        $this->authorize(
+            $this->postRequest(['decision' => 'approve', 'scope' => '']),
+            persisted: $persisted,
+            controller: new AuthorizeController(null, null, ['mcp:read']),
+        );
+
+        $codes = array_values(array_filter($persisted, static fn (object $e): bool => $e instanceof McpAuthorizationCode));
+        self::assertSame(['mcp:read'], $codes[0]->getScopes());
+    }
+
+    public function testTheSplitScopesAreAccepted(): void
+    {
+        $persisted = [];
+        $this->authorize($this->postRequest(['decision' => 'approve', 'scope' => 'mcp:read mcp:write']), persisted: $persisted);
+
+        $codes = array_values(array_filter($persisted, static fn (object $e): bool => $e instanceof McpAuthorizationCode));
+        self::assertSame(['mcp:read', 'mcp:write'], $codes[0]->getScopes());
+    }
+
+    private function resourceAware(): AuthorizeController
+    {
+        $channel = $this->createStub(\Sylius\Component\Core\Model\ChannelInterface::class);
+        $factory = $this->createStub(\Koh\SyliusAgentContracts\Context\AgentContextFactoryInterface::class);
+        $factory->method('create')->willReturn(new \Koh\SyliusAgentContracts\Context\AgentContext($channel, 'https://shop.example', 'en_US'));
+
+        return new AuthorizeController(null, new \Koh\SyliusMcpOAuth\OAuth\ResourceIndicator($factory, '/_mcp'));
+    }
+
     public function testApprovalCarriesTheStateBack(): void
     {
         $response = $this->authorize($this->postRequest(['decision' => 'approve', 'state' => 'xyz789']));
@@ -400,6 +463,7 @@ final class AuthorizeFlowTest extends TestCase
         ?array &$renderContext = null,
         ?array $allowed = null,
         ?string &$renderedTemplate = null,
+        ?AuthorizeController $controller = null,
     ): Response {
         $clients = $this->createStub(EntityRepository::class);
         $clients->method('findOneBy')->willReturn(
@@ -414,7 +478,7 @@ final class AuthorizeFlowTest extends TestCase
             },
         );
 
-        $controller = new AuthorizeController();
+        $controller ??= new AuthorizeController();
         $controller->setContainer($this->container(
             $authenticated ? ($admin ?? $this->admin()) : null,
             $csrfValid,

@@ -34,6 +34,15 @@ final class MetadataControllerTest extends TestCase
         self::assertSame(['authorization_code'], $metadata['grant_types_supported']);
         self::assertSame(['S256'], $metadata['code_challenge_methods_supported']);
         self::assertSame(['none'], $metadata['token_endpoint_auth_methods_supported']);
+        self::assertSame(['mcp', 'mcp:read', 'mcp:write'], $metadata['scopes_supported']);
+    }
+
+    /** A client only asks for refresh tokens when the server says it issues them. */
+    public function testTheRefreshGrantIsAdvertisedWhenEnabled(): void
+    {
+        $controller = new MetadataController($this->contextFactory(), new AuthMethodRegistry([new OAuthAuthMethodDescriptor()]), new AgentJsonResponder(), '/_mcp', true);
+
+        self::assertSame(['authorization_code', 'refresh_token'], $this->decode($controller->authorizationServer(new Request()))['grant_types_supported']);
     }
 
     /**

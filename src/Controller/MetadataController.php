@@ -31,6 +31,7 @@ final class MetadataController
         private readonly AuthMethodRegistry $authMethods,
         private readonly AgentJsonResponder $responder,
         private readonly string $resourcePath = '/_mcp',
+        private readonly bool $refreshTokens = false,
     ) {
     }
 
@@ -45,7 +46,7 @@ final class MetadataController
             'registration_endpoint' => $context->url('/mcp/oauth/register'),
             'revocation_endpoint' => $context->url('/mcp/oauth/revoke'),
             'response_types_supported' => ['code'],
-            'grant_types_supported' => ['authorization_code'],
+            'grant_types_supported' => $this->refreshTokens ? ['authorization_code', 'refresh_token'] : ['authorization_code'],
             'code_challenge_methods_supported' => ['S256'],
             'token_endpoint_auth_methods_supported' => ['none'],
             'scopes_supported' => OAuthServer::SUPPORTED_SCOPES,

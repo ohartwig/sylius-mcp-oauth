@@ -41,9 +41,24 @@ security:
             custom_authenticators:
                 - Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator
             entry_point: Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator
+        # …the admin and shop firewalls follow; /mcp/oauth/ must not be
+        # caught by a stateful one.
+
+    access_control:
+        # Without this rule a request with no Authorization header passes the
+        # mcp firewall anonymously: the authenticator only runs when a Bearer
+        # token is present. The rule is what turns "no token" into a 401.
+        - { path: ^/_mcp, role: ROLE_ADMINISTRATION_ACCESS }
+        # Discovery, registration, token and revocation are public by design.
+        - { path: ^/mcp/oauth/, role: PUBLIC_ACCESS }
 ```
 
-The entity mapping registers itself — no `doctrine.yaml` edit needed.
+**The `access_control` rule for `^/_mcp` is not optional.** The firewall
+alone does not refuse a request without a token.
+
+The entity mapping and, from 3.0, the bundle's migrations register themselves
+— no `doctrine.yaml` or `doctrine_migrations.yaml` edit needed. Run
+`bin/console doctrine:migrations:migrate` after upgrading.
 
 ## Endpoints
 
@@ -100,15 +115,70 @@ administrator's consent.
 - Entries are validated when the container is built: plain `http` off
   loopback, fragments, and schemes such as `javascript:` fail the build.
 
-### `access_token_ttl`
+### `access_token_ttl` and `refresh_token_ttl`
 
-Lifetime in seconds of tokens issued through the OAuth flow (default `3600`,
-minimum `60`). `expires_in` in the token response carries the same value. No
-refresh token is issued: when the token expires, the client runs the
-authorization flow again and the administrator approves it again on the
-consent screen. Raise the value if hourly
-re-consent is too frequent for your agents — that is a trade-off you make
-explicitly, not a default.
+`access_token_ttl`: lifetime in seconds of access tokens (default `3600`,
+minimum `60`). `expires_in` in the token response carries the same value.
+
+`refresh_token_ttl`: lifetime of a refresh token (default `1209600`, 14
+days; `0` issues none). With refresh tokens the access token can stay short
+without hourly re-consent. Every refresh spends the refresh token and returns
+a new pair. **A spent refresh token presented again revokes the whole
+authorization** — every refresh and access token descended from it — because
+one of the two parties holding it is not the client (OAuth 2.1 §4.3.1). The
+client then runs the authorization flow again. A refresh may narrow the scope,
+never widen it. Revoking a refresh token at `/mcp/oauth/revoke` revokes its
+family.
+
+### Scopes
+
+| Scope | Grants |
+|---|---|
+| `mcp:read` | the read tools and resources |
+| `mcp:write` | the write tools, and reading |
+| `mcp` | both — what every token meant before 3.0 |
+
+This server issues the scopes; koh/sylius-mcp enforces them per tool. A client
+that requests none gets `default_scopes` (default `[mcp]`). The facts about a
+token reach the MCP server as security-token attributes (`koh_mcp.token_id`,
+`koh_mcp.client_id`, `koh_mcp.scopes`, `koh_mcp.audience`).
+
+### Audience binding (RFC 8707)
+
+Every authorization is bound to the MCP endpoint (`resource_path` on the
+channel's URL — the `resource` of the RFC 9728 metadata). A client may send
+`resource` at `/authorize` and at the token endpoint; any other value fails
+with `invalid_target`. A client that sends none gets a bound token anyway.
+`/_mcp` refuses a token bound to another resource. Tokens from before 3.0
+and CLI tokens carry no audience and keep working.
+
+### Rate limits and CORS
+
+```yaml
+koh_mcp_oauth:
+    rate_limits:
+        register: { limit: 10, interval: '1 hour' }   # per client address; 0 = off
+        token: { limit: 30, interval: '1 minute' }
+    cors_allowed_origins:
+        - 'https://inspector.example.com'           # browser-based MCP clients only
+```
+
+Registration is open by design, so it is limited per address; the token
+endpoint is limited against guessing. Over the limit: `429` with
+`Retry-After`. The limits key on the client address — set
+`framework.trusted_proxies` behind an ingress, or every request shares the
+proxy's address and one budget.
+
+The token, registration and revocation endpoints no longer answer
+`Access-Control-Allow-Origin: *`; only listed origins get CORS headers.
+Server-side clients (Claude's connectors, Claude Code) send no `Origin` and are
+unaffected. The discovery documents stay public with `*`.
+
+### Client address per token
+
+Each access token records the address it was issued to and the address of its
+last use on `/_mcp` (`created_ip`, `last_used_ip`) — for the audit trail and
+the token overview, not as a binding: clients move between networks.
 
 ### Consent screen and translations
 
@@ -165,6 +235,22 @@ The raw token is shown once and never stored. A CLI token expires after
 **90 days** unless `--ttl-days` sets another positive number of days. A token
 that never expires needs `--no-expiry`, spelled out; the two options exclude
 each other.
+
+## Upgrading to 3.0
+
+1. **Run the migrations.** 3.0 ships its first migration
+   (`Koh\SyliusMcpOAuth\Migrations\Version20261003120000`): new columns on
+   `app_mcp_access_token` and `app_mcp_authorization_code`, and the table
+   `app_mcp_refresh_token`. The path is registered automatically.
+2. **Add the `access_control` rule for `^/_mcp`** if the application does not
+   have it (see *Install*).
+3. **Browser-based clients** calling the token, registration or revocation
+   endpoint from another origin must be listed in `cors_allowed_origins`.
+4. **Refresh tokens are on by default** (14 days). Set `refresh_token_ttl: 0`
+   to keep the 2.x behaviour. With refresh tokens, consider lowering
+   `access_token_ttl` again.
+5. Clients now see the scopes `mcp:read` and `mcp:write` in the metadata.
+   Tokens with the scope `mcp` keep full access.
 
 ## Upgrading to 2.0
 

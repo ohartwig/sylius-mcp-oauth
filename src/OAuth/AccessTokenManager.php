@@ -43,6 +43,9 @@ final class AccessTokenManager
         array $scopes = ['mcp'],
         ?\DateTimeImmutable $expiresAt = null,
         ?string $clientId = null,
+        ?string $audience = null,
+        ?string $refreshFamily = null,
+        ?string $ip = null,
     ): array {
         $raw = self::PREFIX . bin2hex(random_bytes(32));
 
@@ -53,6 +56,9 @@ final class AccessTokenManager
             scopes: $scopes,
             expiresAt: $expiresAt,
             clientId: $clientId,
+            audience: $audience,
+            refreshFamily: $refreshFamily,
+            createdIp: $ip,
         );
 
         $this->entityManager->persist($entity);
@@ -63,9 +69,9 @@ final class AccessTokenManager
 
     /**
      * Resolve a raw bearer token to a valid, non-revoked, non-expired token
-     * entity, or null. Updates last-used on success.
+     * entity, or null. Updates last-used time and address on success.
      */
-    public function findValid(string $rawToken): ?McpAccessToken
+    public function findValid(string $rawToken, ?string $ip = null): ?McpAccessToken
     {
         if ($rawToken === '' || !str_starts_with($rawToken, self::PREFIX)) {
             return null;
@@ -76,7 +82,7 @@ final class AccessTokenManager
             return null;
         }
 
-        $token->touch();
+        $token->touch(ip: $ip);
         $this->entityManager->flush();
 
         return $token;

@@ -24,7 +24,13 @@ final class OAuthServer
     /** Authorization codes are short-lived (seconds). */
     private const CODE_TTL = 300;
 
-    public const SUPPORTED_SCOPES = ['mcp'];
+    /**
+     * `mcp:read` covers the read tools, `mcp:write` the write tools (and
+     * reading). `mcp` is what every token meant before the split — both —
+     * and stays supported so existing clients and tokens keep working. The
+     * MCP server (koh/sylius-mcp) enforces them; this server only issues them.
+     */
+    public const SUPPORTED_SCOPES = ['mcp', 'mcp:read', 'mcp:write'];
 
     /** @var EntityRepository<McpOAuthClient> */
     private EntityRepository $clients;
@@ -97,6 +103,7 @@ final class OAuthServer
         array $scopes,
         string $codeChallenge,
         string $codeChallengeMethod,
+        ?string $resource = null,
     ): string {
         $raw = bin2hex(random_bytes(32));
 
@@ -109,6 +116,7 @@ final class OAuthServer
             codeChallenge: $codeChallenge,
             codeChallengeMethod: $codeChallengeMethod,
             expiresAt: (new \DateTimeImmutable())->modify(sprintf('+%d seconds', self::CODE_TTL)),
+            resource: $resource,
         );
 
         $this->entityManager->persist($code);
@@ -122,7 +130,7 @@ final class OAuthServer
      * the code is usable, bound to this client + redirect URI, and that the PKCE
      * verifier matches. Marks the code used. Returns the code payload.
      *
-     * @return array{admin_user_id: int, scopes: list<string>, client: McpOAuthClient}
+     * @return array{admin_user_id: int, scopes: list<string>, client: McpOAuthClient, resource: string|null}
      */
     public function consumeCode(
         string $rawCode,
@@ -185,7 +193,7 @@ final class OAuthServer
         // the same request pass isUsable().
         $code->markUsed();
 
-        return ['admin_user_id' => $code->getAdminUserId(), 'scopes' => $code->getScopes(), 'client' => $client];
+        return ['admin_user_id' => $code->getAdminUserId(), 'scopes' => $code->getScopes(), 'client' => $client, 'resource' => $code->getResource()];
     }
 
     /** PKCE S256 (RFC 7636): base64url(sha256(verifier)) == stored challenge. */

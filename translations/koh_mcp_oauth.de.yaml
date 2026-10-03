@@ -9,6 +9,8 @@ consent:
     scopes: 'Angefragter Zugriff'
     scope:
         mcp: 'Shop über MCP verwalten (Produkte, Inhalte, Bestellungen)'
+        'mcp:read': 'Shop über MCP lesen (Produkte, Katalogstruktur, Bestellungen)'
+        'mcp:write': 'Shop über MCP ändern (Katalog, Inhalte, Warenkörbe) – riskante Änderungen bestätigst du weiterhin im Client'
     warning: 'Der Client handelt mit deinen Rechten, bis das Token abläuft oder du es widerrufst. Autorisiere nur Clients, die du selbst gestartet hast.'
     approve: 'Autorisieren'
     deny: 'Ablehnen'
