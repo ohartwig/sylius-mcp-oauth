@@ -1,0 +1,15 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "local>devops/renovate-runner:default.json"
+  ],
+  "packageRules": [
+    {
+      "description": "doctrine/orm stays below 3.7 while sylius/sylius declares a conflict with it (2026-10-03). orm 3.7.0 added a SchemaValidator check that Sylius' unused ShipmentUnit mapping fails; Sylius 2.2.10 and 2.3.0 answered with conflict \"doctrine/orm >=3.7\" (Sylius PR #19251, CONFLICTS.md), to be lifted once that mapping is no longer loaded. Without this rule pinup proposes orm 3.7.x next to Sylius 2.3 and composer cannot resolve the pair. Remove this rule when a Sylius release drops the conflict.",
+      "matchPackageNames": [
+        "doctrine/orm"
+      ],
+      "allowedVersions": "<3.7"
+    }
+  ]
+}
