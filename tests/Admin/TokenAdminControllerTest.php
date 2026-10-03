@@ -101,6 +101,38 @@ final class TokenAdminControllerTest extends TestCase
         return $request;
     }
 
+    public function testTheOverviewRoleListsEveryonesTokensAndShowsStatus(): void
+    {
+        $this->token->revoke();
+
+        $this->controller(currentAdminId: 8, overviewRole: 'ROLE_MCP_TOKEN_ADMIN', ownerExists: false)->index();
+
+        $row = $this->rendered['tokens'][0] ?? null;
+        self::assertIsArray($row);
+        self::assertSame('revoked', $row['status']);
+        self::assertSame('#7', $row['owner'], 'a deleted owner is shown by id');
+    }
+
+    public function testAnExpiredTokenIsShownAsExpired(): void
+    {
+        $expired = new McpAccessToken(hash('sha256', 'y'), 7, 'old', ['mcp'], new \DateTimeImmutable('-1 hour'));
+        (new \ReflectionProperty(McpAccessToken::class, 'id'))->setValue($expired, 6);
+        $this->token = $expired;
+
+        $this->controller()->index();
+
+        self::assertSame('expired', $this->rendered['tokens'][0]['status'] ?? null);
+        self::assertIsArray($this->rendered['tokens'][0] ?? null);
+        self::assertNull($this->rendered['tokens'][0]['client'], 'CLI tokens have no client');
+    }
+
+    public function testWithoutAnAdministratorThereIsNoOwnList(): void
+    {
+        $this->expectException(AccessDeniedException::class);
+
+        $this->controller(currentAdminId: null)->index();
+    }
+
     /** Without the overview role an administrator manages their own tokens only. */
     public function testAnotherAdministratorsTokenCannotBeRevoked(): void
     {
@@ -120,7 +152,7 @@ final class TokenAdminControllerTest extends TestCase
         self::assertTrue($this->token->isRevoked());
     }
 
-    private function controller(bool $csrfValid = true, bool $granted = true, int $currentAdminId = 7, ?string $overviewRole = null): TokenAdminController
+    private function controller(bool $csrfValid = true, bool $granted = true, ?int $currentAdminId = 7, ?string $overviewRole = null, bool $ownerExists = true): TokenAdminController
     {
         $tokens = $this->createStub(EntityRepository::class);
         $tokens->method('findBy')->willReturn([$this->token]);
@@ -142,7 +174,7 @@ final class TokenAdminControllerTest extends TestCase
         $admin = $this->createStub(AdminUserInterface::class);
         $admin->method('getEmail')->willReturn('admin@example.test');
         $admins = $this->createStub(ObjectRepository::class);
-        $admins->method('find')->willReturn($admin);
+        $admins->method('find')->willReturn($ownerExists ? $admin : null);
 
         $controller = new TokenAdminController(new AccessTokenManager($entityManager), new OAuthServer($entityManager), $admins, new RefreshTokenManager($entityManager), $overviewRole);
         $controller->setContainer($this->container($csrfValid, $granted, $currentAdminId));
@@ -150,12 +182,12 @@ final class TokenAdminControllerTest extends TestCase
         return $controller;
     }
 
-    private function container(bool $csrfValid, bool $granted, int $currentAdminId): ContainerInterface
+    private function container(bool $csrfValid, bool $granted, ?int $currentAdminId): ContainerInterface
     {
         $current = $this->createStub(AdminUserInterface::class);
         $current->method('getId')->willReturn($currentAdminId);
         $securityToken = $this->createStub(TokenInterface::class);
-        $securityToken->method('getUser')->willReturn($current);
+        $securityToken->method('getUser')->willReturn(null === $currentAdminId ? null : $current);
         $storage = $this->createStub(TokenStorageInterface::class);
         $storage->method('getToken')->willReturn($securityToken);
 
