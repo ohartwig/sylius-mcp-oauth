@@ -15,6 +15,7 @@ path = [
     ".gitignore",
     "composer.json",
     "composer.lock",
+    "renovate.json",
     "phpstan.neon",
     "phpunit.xml.dist",
     "CHANGELOG.md",
