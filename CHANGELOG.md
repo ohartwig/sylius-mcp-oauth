@@ -1,3 +1,22 @@
+## [3.0.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v2.0.3...v3.0.0) (2026-10-03)
+
+### :boom: BREAKING CHANGES
+
+* a migration is required (new columns, table app_mcp_refresh_token). Browser-based clients on other origins must be listed in cors_allowed_origins. Refresh tokens are on by default.
+
+### :sparkles: Features
+
+* **oauth:** audience binding, split scopes, refresh rotation, rate limits, CORS allow-list ([2d4b30e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/2d4b30e26186338770b5c8a3e9da2f88427df285))
+* **admin:** list and revoke MCP tokens in the Sylius admin ([49dfa3d](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/49dfa3d343f82b082056d77da949dc5b56fad3d4))
+
+### :bug: Fixes
+
+* **admin:** drop the dashboard link from the token page ([109f502](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/109f502f9baed88e44dddcc53f5e4c6db57db9c8))
+
+### :white_check_mark: Tests
+
+* **admin:** cover the menu listener, the overview role and token states ([489e14e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/489e14e9a97aec1b51c220f113e31652b2b4e04e))
+
 ## [2.0.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v2.0.2...v2.0.3) (2026-10-03)
 
 ### :bug: Fixes
