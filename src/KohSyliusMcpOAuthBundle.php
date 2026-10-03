@@ -100,6 +100,13 @@ final class KohSyliusMcpOAuthBundle extends AbstractBundle
                     ->scalarPrototype()->cannotBeEmpty()->end()
                     ->defaultValue([])
                 ->end()
+                ->arrayNode('admin')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('menu')->defaultTrue()->info('Add "MCP tokens" to the admin sidebar under Configuration.')->end()
+                        ->scalarNode('overview_role')->defaultNull()->info('Role that sees and revokes every administrator\'s MCP tokens. null: each administrator manages only their own.')->end()
+                    ->end()
+                ->end()
                 ->arrayNode('rate_limits')
                     ->addDefaultsIfNotSet()
                     ->children()
@@ -156,6 +163,8 @@ final class KohSyliusMcpOAuthBundle extends AbstractBundle
         $builder->setParameter('koh_mcp_oauth.default_scopes', array_values($config['default_scopes'] ?? ['mcp']));
         $builder->setParameter('koh_mcp_oauth.cors_allowed_origins', array_values($config['cors_allowed_origins'] ?? []));
         $builder->setParameter('koh_mcp_oauth.rate_limits', $config['rate_limits'] ?? []);
+        $builder->setParameter('koh_mcp_oauth.admin.menu', (bool) ($config['admin']['menu'] ?? true));
+        $builder->setParameter('koh_mcp_oauth.admin.overview_role', $config['admin']['overview_role'] ?? null);
 
         $container->import('../config/services.php');
     }

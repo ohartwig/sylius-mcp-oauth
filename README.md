@@ -70,6 +70,7 @@ The entity mapping and, from 3.0, the bundle's migrations register themselves
 | `/mcp/oauth/token` | token exchange |
 | `/mcp/oauth/revoke` | revocation |
 | `/admin/mcp/authorize` | consent — deliberately under `/admin` |
+| `/admin/mcp/access-tokens` | token overview and revocation in the Sylius admin |
 
 `/authorize` sits under `/admin` so the admin firewall covers it: consent
 requires a signed-in administrator. Everything else is public, because a client
@@ -222,6 +223,29 @@ It is built from every registered `AuthMethodDescriptorInterface`, so a shop tha
 also installs `koh/sylius-web-bot-auth` advertises both credential types without
 either bundle knowing the other exists. The same descriptor feeds `/auth.md`, so
 the prose and the machine-readable metadata cannot drift apart.
+
+## Token overview in the admin
+
+`/admin/mcp/access-tokens` (sidebar: *Configuration → MCP tokens*) lists the
+signed-in administrator's access tokens: client, scopes, issued (with
+address), last used (with address), expiry and status. **Revoke** ends the
+token at once; a token from a refresh-token family takes the family with it,
+so the client cannot refresh it back. The page sits behind the admin firewall
+and needs `ROLE_ADMINISTRATION_ACCESS`; revocation is a CSRF-protected POST.
+
+```yaml
+koh_mcp_oauth:
+    admin:
+        menu: true                                 # false: no sidebar entry (e.g. the application has its own)
+        overview_role: ROLE_MCP_TOKEN_ADMIN        # sees and revokes every administrator's tokens (default: nobody)
+```
+
+An application that already has its own token page at `/admin/mcp/tokens`
+keeps it; this one lives next to it.
+
+The template is `@KohSyliusMcpOAuth/admin/tokens.html.twig`, overridable at
+`templates/bundles/KohSyliusMcpOAuthBundle/admin/tokens.html.twig`. It renders
+inside the base admin layout without the sidebar.
 
 ## Issuing a token by hand
 

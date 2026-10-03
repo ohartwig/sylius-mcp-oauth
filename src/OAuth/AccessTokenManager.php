@@ -102,6 +102,19 @@ final class AccessTokenManager
         return $tokens;
     }
 
+    /**
+     * Tokens for the admin overview, newest first.
+     *
+     * @return list<McpAccessToken>
+     */
+    public function findRecent(int $limit = 200): array
+    {
+        /** @var list<McpAccessToken> $tokens */
+        $tokens = $this->repository->findBy([], ['createdAt' => 'DESC'], $limit);
+
+        return $tokens;
+    }
+
     public function revoke(McpAccessToken $token): void
     {
         $token->revoke();
