@@ -245,8 +245,7 @@ keeps it; this one lives next to it.
 
 The template is `@KohSyliusMcpOAuth/admin/tokens.html.twig`, overridable at
 `templates/bundles/KohSyliusMcpOAuthBundle/admin/tokens.html.twig`. It renders
-inside the base admin layout without the sidebar; the link back goes to the
-dashboard.
+inside the base admin layout without the sidebar.
 
 ## Issuing a token by hand
 

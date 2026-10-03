@@ -26,7 +26,6 @@ admin:
         menu: 'MCP-Tokens'
         title: 'MCP-Zugriffstokens'
         intro: 'Tokens, mit denen Agenten im Namen eines Administrators handeln. Ein Widerruf beendet die ganze Autorisierung, Refresh-Tokens eingeschlossen.'
-        back: 'Dashboard'
         owner: 'Administrator'
         client: 'Client'
         cli: 'CLI-Token'

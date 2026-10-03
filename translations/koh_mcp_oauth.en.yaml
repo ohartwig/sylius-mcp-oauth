@@ -26,7 +26,6 @@ admin:
         menu: 'MCP tokens'
         title: 'MCP access tokens'
         intro: 'Tokens agents use to act on behalf of an administrator. Revoking a token ends its whole authorization, refresh tokens included.'
-        back: 'Dashboard'
         owner: 'Administrator'
         client: 'Client'
         cli: 'CLI token'
