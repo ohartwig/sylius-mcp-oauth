@@ -5,6 +5,7 @@
 
 declare(strict_types=1);
 
+use Koh\SyliusMcpOAuth\Admin\TokenAdminController;
 use Koh\SyliusMcpOAuth\Controller\AuthorizeController;
 use Koh\SyliusMcpOAuth\Controller\MetadataController;
 use Koh\SyliusMcpOAuth\Controller\RegisterController;
@@ -45,6 +46,18 @@ return static function (RoutingConfigurator $routes): void {
     // NOTE: /admin is the default Sylius admin path. If
     // SYLIUS_ADMIN_ROUTING_PATH_NAME is customised, override this route in the
     // application so it stays behind the admin firewall.
+    // Token overview and revocation, behind the admin firewall like /authorize.
+    // Not /admin/mcp/tokens: applications that built their own page before
+    // this one (commerce did) have it there.
+    $routes->add('mcp_oauth_admin_tokens', '/admin/mcp/access-tokens')
+        ->controller([TokenAdminController::class, 'index'])
+        ->methods(['GET']);
+
+    $routes->add('mcp_oauth_admin_token_revoke', '/admin/mcp/access-tokens/{id}/revoke')
+        ->controller([TokenAdminController::class, 'revoke'])
+        ->requirements(['id' => '\d+'])
+        ->methods(['POST']);
+
     $routes->add('mcp_oauth_authorize', '/admin/mcp/authorize')
         ->controller(AuthorizeController::class)
         ->methods(['GET', 'POST']);

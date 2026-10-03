@@ -16,6 +16,7 @@ use Koh\SyliusMcpOAuth\Controller\TokenController;
 use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
 use Koh\SyliusMcpOAuth\Entity\McpAuthorizationCode;
 use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
+use Koh\SyliusMcpOAuth\Http\CorsPolicy;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
 use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
@@ -157,11 +158,24 @@ final class OAuthEndpointsTest extends TestCase
         }
     }
 
-    public function testTheTokenEndpointIsReachableCrossOrigin(): void
+    /**
+     * No wildcard on an endpoint that mints credentials: a browser-based
+     * client must be on the allow-list, and gets its own origin back.
+     * Server-side clients send no Origin and are unaffected.
+     */
+    public function testTheTokenEndpointAnswersOnlyAllowListedOrigins(): void
     {
-        // MCP clients run in browsers; without this the exchange fails at the
-        // preflight and the whole flow is unusable from a web client.
-        self::assertSame('*', $this->token($this->tokenRequest())->headers->get('Access-Control-Allow-Origin'));
+        self::assertFalse($this->token($this->tokenRequest())->headers->has('Access-Control-Allow-Origin'));
+
+        $request = $this->tokenRequest();
+        $request->headers->set('Origin', 'https://inspector.example');
+        $response = $this->token($request, cors: new CorsPolicy(['https://inspector.example']));
+        self::assertSame('https://inspector.example', $response->headers->get('Access-Control-Allow-Origin'));
+        self::assertSame('Origin', $response->headers->get('Vary'));
+
+        $request = $this->tokenRequest();
+        $request->headers->set('Origin', 'https://evil.example');
+        self::assertFalse($this->token($request, cors: new CorsPolicy(['https://inspector.example']))->headers->has('Access-Control-Allow-Origin'));
     }
 
     public function testTheMintedTokenIsBoundToTheConsentingAdmin(): void
@@ -190,7 +204,7 @@ final class OAuthEndpointsTest extends TestCase
         ]);
 
         self::assertSame(Response::HTTP_CREATED, $response->getStatusCode());
-        self::assertSame('*', $response->headers->get('Access-Control-Allow-Origin'));
+        self::assertFalse($response->headers->has('Access-Control-Allow-Origin'), 'no wildcard');
 
         $body = $this->body($response);
         self::assertStringStartsWith('mcpc_', $body['client_id']);
@@ -354,12 +368,9 @@ final class OAuthEndpointsTest extends TestCase
         self::assertSame(Response::HTTP_OK, $this->revoke(null, null)->getStatusCode());
     }
 
-    public function testTheRevocationEndpointIsReachableCrossOrigin(): void
+    public function testTheRevocationEndpointSendsNoWildcard(): void
     {
-        self::assertSame(
-            '*',
-            $this->revoke('tbmcp_' . str_repeat('a', 64), null)->headers->get('Access-Control-Allow-Origin'),
-        );
+        self::assertFalse($this->revoke('tbmcp_' . str_repeat('a', 64), null)->headers->has('Access-Control-Allow-Origin'));
     }
 
     // --- helpers -------------------------------------------------------------
@@ -393,16 +404,19 @@ final class OAuthEndpointsTest extends TestCase
         ], $overrides));
     }
 
-    private function token(Request $request, ?\Closure $persistCallback = null, ?int $accessTokenTtl = null): JsonResponse
+    private function token(Request $request, ?\Closure $persistCallback = null, ?int $accessTokenTtl = null, ?CorsPolicy $cors = null): JsonResponse
     {
         $entityManager = $this->entityManager($persistCallback);
-        $controller = null === $accessTokenTtl ? new TokenController() : new TokenController($accessTokenTtl);
+        $controller = new TokenController($accessTokenTtl ?? TokenController::DEFAULT_ACCESS_TOKEN_TTL, corsPolicy: $cors ?? new CorsPolicy());
 
-        return $controller(
+        $response = $controller(
             $request,
             new OAuthServer($entityManager, null, new RedirectUriPolicy([self::REDIRECT_URI])),
             new AccessTokenManager($entityManager),
         );
+        self::assertInstanceOf(JsonResponse::class, $response);
+
+        return $response;
     }
 
     /**
@@ -415,10 +429,13 @@ final class OAuthEndpointsTest extends TestCase
 
     private function registerRaw(string $content): JsonResponse
     {
-        return (new RegisterController())(
+        $response = (new RegisterController())(
             new Request(content: $content),
             new OAuthServer($this->entityManager(), null, new RedirectUriPolicy([self::REDIRECT_URI])),
         );
+        self::assertInstanceOf(JsonResponse::class, $response);
+
+        return $response;
     }
 
     private function revoke(?string $rawToken, ?McpAccessToken $token): JsonResponse

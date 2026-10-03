@@ -9,6 +9,7 @@ namespace Koh\SyliusMcpOAuth\Controller;
 
 use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
+use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -55,8 +56,13 @@ final class AuthorizeController extends AbstractController
      */
     private const CODE_CHALLENGE_PATTERN = '/^[A-Za-z0-9\-._~]{43,128}$/';
 
+    /**
+     * @param list<string> $defaultScopes what a request without `scope` is granted
+     */
     public function __construct(
         private readonly ?TranslatorInterface $translator = null,
+        private readonly ?ResourceIndicator $resource = null,
+        private readonly array $defaultScopes = ['mcp'],
     ) {
     }
 
@@ -83,7 +89,8 @@ final class AuthorizeController extends AbstractController
         $state = (string) $params->get('state', '');
         $codeChallenge = (string) $params->get('code_challenge', '');
         $challengeMethod = (string) $params->get('code_challenge_method', 'S256');
-        $scopes = $this->resolveScopes((string) $params->get('scope', 'mcp'));
+        $scopes = $this->resolveScopes((string) $params->get('scope', ''));
+        $requestedResource = (string) $params->get('resource', '');
 
         // From here on, protocol errors are reported to the (validated) client.
         if ((string) $params->get('response_type', 'code') !== 'code') {
@@ -95,6 +102,16 @@ final class AuthorizeController extends AbstractController
         if ($scopes === null) {
             return $this->deny($redirectUri, 'invalid_scope', $state);
         }
+
+        // RFC 8707: a client names the resource it wants a token for. It
+        // must be this server's MCP endpoint — a token for anything else is
+        // not ours to issue (invalid_target). A client that names none gets
+        // its token bound to the endpoint anyway: an unbound token is the
+        // one a malicious MCP server could replay here.
+        if ('' !== $requestedResource && null !== $this->resource && !$this->resource->matches($requestedResource, $request)) {
+            return $this->deny($redirectUri, 'invalid_target', $state);
+        }
+        $boundResource = '' !== $requestedResource ? $requestedResource : $this->resource?->canonical($request);
 
         $admin = $this->getUser();
         if (!$admin instanceof UserInterface || !method_exists($admin, 'getId')) {
@@ -117,6 +134,7 @@ final class AuthorizeController extends AbstractController
                 scopes: $scopes,
                 codeChallenge: $codeChallenge,
                 codeChallengeMethod: $challengeMethod,
+                resource: $boundResource,
             );
 
             return new RedirectResponse($this->appendQuery($redirectUri, ['code' => $code, 'state' => $state]));
@@ -135,6 +153,7 @@ final class AuthorizeController extends AbstractController
                 'code_challenge' => $codeChallenge,
                 'code_challenge_method' => $challengeMethod,
                 'response_type' => 'code',
+                'resource' => $requestedResource,
             ],
             'redirect_uri' => $redirectUri,
             'translation_domain' => self::TRANSLATION_DOMAIN,
@@ -168,7 +187,7 @@ final class AuthorizeController extends AbstractController
             static fn (string $s): bool => '' !== $s && '0' !== $s,
         ));
         if ($requested === []) {
-            return ['mcp'];
+            return $this->defaultScopes;
         }
         foreach ($requested as $s) {
             if (!\in_array($s, OAuthServer::SUPPORTED_SCOPES, true)) {
