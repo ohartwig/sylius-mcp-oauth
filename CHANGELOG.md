@@ -1,3 +1,9 @@
+## [3.0.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.1...v3.0.2) (2026-10-04)
+
+### :bug: Fixes
+
+* **deps:** update dependency doctrine/orm to ^3.7.3 ([c1c9033](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c1c90335d1d2a4060d9209159cc9527c924c2e32))
+
 ## [3.0.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.0...v3.0.1) (2026-10-04)
 
 ### :bug: Fixes
