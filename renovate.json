@@ -5,11 +5,18 @@
   ],
   "packageRules": [
     {
-      "description": "doctrine/orm stays below 3.7 while sylius/sylius declares a conflict with it (2026-10-03). orm 3.7.0 added a SchemaValidator check that Sylius' unused ShipmentUnit mapping fails; Sylius 2.2.10 and 2.3.0 answered with conflict \"doctrine/orm >=3.7\" (Sylius PR #19251, CONFLICTS.md), to be lifted once that mapping is no longer loaded. Without this rule pinup proposes orm 3.7.x next to Sylius 2.3 and composer cannot resolve the pair. Remove this rule when a Sylius release drops the conflict.",
+      "description": "doctrine/orm stays below 3.7 while sylius/sylius declares a conflict with it (2026-10-03). orm 3.7.0 added a SchemaValidator check that Sylius' unused ShipmentUnit mapping fails; Sylius 2.2.10 and 2.3.0 answered with conflict \"doctrine/orm >=3.7\" (Sylius PR #19251, CONFLICTS.md), to be lifted once that mapping is no longer loaded. Without this rule pinup proposes orm 3.7.x next to Sylius 2.3 and composer cannot resolve the pair. Remove this rule when a Sylius release drops the conflict. The rule does not stop consumers from resolving: the constraint ^3.6.9 still admits orm 3.7.x, which a consumer on Sylius 2.2.9 (no orm conflict declared) may run; it only keeps pinup from raising the floor to 3.7, which would lock out Sylius 2.2.10 and 2.3.0 consumers.",
       "matchPackageNames": [
         "doctrine/orm"
       ],
       "allowedVersions": "<3.7"
+    },
+    {
+      "description": "sylius/sylius keeps its lower bound at 2.2.9. Consumers on Sylius 2.2 (commerce, held there because sylius/paypal-plugin has no release for 2.3) must be able to install this package; a pinup range bump to ^2.3.0 on 2026-09-30 locked them out of every later release. widen appends new majors/minors instead of raising the floor. Remove when every consumer runs Sylius 2.3 or later.",
+      "matchPackageNames": [
+        "sylius/sylius"
+      ],
+      "rangeStrategy": "widen"
     }
   ]
 }
