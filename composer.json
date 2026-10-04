@@ -29,7 +29,7 @@
         "ext-ctype": "*",
         "ext-mbstring": "*",
         "doctrine/doctrine-bundle": "^2.19.1",
-        "doctrine/orm": "^3.7.3",
+        "doctrine/orm": "^3.6.9",
         "doctrine/persistence": "^3.0 || ^4.0",
         "koh/sylius-agent-contracts": "^1.1",
         "psr/cache": "^2.0 || ^3.0",
