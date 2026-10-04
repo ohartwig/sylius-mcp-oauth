@@ -1,3 +1,9 @@
+## [3.0.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.2...v3.0.3) (2026-10-04)
+
+### :bug: Fixes
+
+* **deps:** restore the doctrine/orm floor ^3.6.9 ([3c44edb](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/3c44edbd751551db8cc1fa5b709cb12f237a7865))
+
 ## [3.0.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.1...v3.0.2) (2026-10-04)
 
 ### :bug: Fixes
