@@ -1,3 +1,18 @@
+## [3.0.6](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.5...v3.0.6) (2026-10-05)
+
+### :repeat: Continuous Integrations
+
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.23 ([52d0548](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/52d05488640919e2a01101702bd71edf515bcfb6))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.22 ([08d90f5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/08d90f5f28a214ab62f2fa46e4e72dc5c018c272))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.20 ([a6af18e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/a6af18e40782708cf21054601250b1b42738b88c))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.19 ([8998e1d](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/8998e1df4873e83d8d537f8793c41ee3d643df83))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.18 ([ab1d6fb](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ab1d6fb15b0229e18425df8173a0703cdd839f24))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.17 ([0e826f8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/0e826f874cd9e39cdab5809fb796b5426f9457b3))
+
+### :repeat: Chores
+
+* **deps:** update dependency phpstan/phpstan to ^2.2.17 ([e66d371](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/e66d371d412a7473eb130a722794ecc06f752053))
+
 ## [3.0.5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.4...v3.0.5) (2026-10-04)
 
 ### :repeat: Continuous Integrations
