@@ -1,3 +1,9 @@
+## [3.0.7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.6...v3.0.7) (2026-10-06)
+
+### :repeat: Chores
+
+* **deps:** update dependency phpunit/phpunit to ^11.5.57 ([ffc2426](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ffc242626ac4baba336e1dadc67a5b5af9fbcfcd))
+
 ## [3.0.6](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.5...v3.0.6) (2026-10-05)
 
 ### :repeat: Continuous Integrations
