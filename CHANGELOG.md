@@ -1,3 +1,14 @@
+## [3.0.8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.7...v3.0.8) (2026-10-06)
+
+### :bug: Fixes
+
+* **deps:** update dependency doctrine/orm to ^3.7.4 ([7444511](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/7444511ba14234b1b28bb22126101ec4396d11ef))
+
+### :repeat: Continuous Integrations
+
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.25 ([2c3177c](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/2c3177c05077fa04d14a0691b3e2491a0bcc82cd))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.38.24 ([89b8d57](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/89b8d57f8dcec07b36627aff210a7e3f7cd86f28))
+
 ## [3.0.7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.6...v3.0.7) (2026-10-06)
 
 ### :repeat: Chores
