@@ -25,7 +25,7 @@
         "source": "https://github.com/ohartwig/sylius-mcp-oauth"
     },
     "require": {
-        "php": "^8.5.11",
+        "php": "^8.3",
         "ext-ctype": "*",
         "ext-mbstring": "*",
         "doctrine/doctrine-bundle": "^2.19.1",
