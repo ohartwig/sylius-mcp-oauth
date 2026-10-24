@@ -1,3 +1,43 @@
+## [3.0.15](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.14...v3.0.15) (2026-10-24)
+
+### :bug: Fixes
+
+* **deps:** update dependency doctrine/doctrine-bundle to ^2.19.2 ([6ba9180](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/6ba9180700431c6444754e230ded2a051e2d14dc))
+
+### :repeat: Continuous Integrations
+
+* follow components on the rolling major tag ([d9d485c](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/d9d485ce102a16890af0d471eccc037c3e4a212f))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.43 ([5a81384](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/5a81384071b6f37195a0a7afb242d2f404590845))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.42 ([d384fbb](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/d384fbb7fd26763f1329ac25e54ad45dfb96d375))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.41 ([083c22e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/083c22e3c134ebde4e6c7ff3a9dc618427f92c4a))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.40 ([c2db5c7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c2db5c7c0dfebbd6bb131691480eee9a9dfbfc81))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.39 ([1b5ff99](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/1b5ff995551c8f621b2b762328b9dc0a713635a5))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.38 ([501c439](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/501c43930485dcbbb3d646a415b4cf28e63961f4))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.36 ([7b36fb7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/7b36fb7636a4de55b4da1ee49c511635e895fec5))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.34 ([3a84996](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/3a84996e798400c5ccaff148e38eabac91012925))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.33 ([277f773](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/277f7735b2242918013098edb25813a58e265bd6))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.32 ([8d1c31f](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/8d1c31f28e06cf13592b9fbd320ad69d7b81b988))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.31 ([693098a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/693098aa941a367381874d29d96e203e3e26b2f2))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.30 ([cbf4670](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/cbf4670f91b0f053966c2131d5bf5a9921555539))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.29 ([ae0c40b](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ae0c40b9abbc525c3b42618ad9ed857c7215d28d))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.28 ([8f56bcb](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/8f56bcbfa5f76c13593ba542e76388ae29057e58))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.27 ([c2f3d27](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c2f3d2777b0fa38ca2453b958527f29e64abf799))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.26 ([f37df55](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/f37df551bf5066ccdf6aa102e8f8d1637d9e9735))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.25 ([c3f41a5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c3f41a5166615fc3963b819e70d9ebd14684af27))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.24 ([f15115e](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/f15115eaee882066485a453ee177daa6724337cd))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.23 ([e82bb4c](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/e82bb4c4fd828c880186cd7e9103aa7e10d5054d))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.22 ([1cf69e8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/1cf69e8ffb8596a6bb5dd135d55704e6765d6645))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.21 ([5966556](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/59665564dbdf2a8c0285bcadebfc9f343055f8aa))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.20 ([e84fd00](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/e84fd0084bd9b07341a4d8ce4d9e5396959b5161))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.19 ([9cc0c65](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/9cc0c654a6147561a7ce0718f4c5caa96455a48b))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.18 ([a5c6556](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/a5c65566cace21c5b1d5be658a70f34abacd92bf))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.17 ([c4ce122](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c4ce122b44c01b493cf4df0b76334f0e4251c3d0))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.15 ([ca78c77](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ca78c77b38789ffc067f74810ff51f0e486c4714))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.14 ([71d191d](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/71d191d9bd0416792e9c116761dea2512dea6eff))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.13 ([6c18a1a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/6c18a1a47a2c1066f03d7d92bd73b5092bf94ad3))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.12 ([ca2e1cc](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ca2e1cc2a99ae6a668e1a1cb2615061814061220))
+* **deps:** update dependency devops/ci-cd-components/lint-tools to v1.40.11 ([89c78fc](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/89c78fc6f2c54c9a6453217b63016b91f8bbbb71))
+
 ## [3.0.14](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.13...v3.0.14) (2026-10-20)
 
 ### :bug: Fixes
