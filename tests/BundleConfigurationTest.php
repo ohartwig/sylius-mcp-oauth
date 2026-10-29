@@ -38,6 +38,7 @@ final class BundleConfigurationTest extends TestCase
         self::assertSame([], $config['cors_allowed_origins'], 'no browser origin is trusted by default');
         self::assertSame(['limit' => 10, 'interval' => '1 hour'], $config['rate_limits']['register']);
         self::assertSame(['limit' => 30, 'interval' => '1 minute'], $config['rate_limits']['token']);
+        self::assertSame(['limit' => 300, 'interval' => '1 minute'], $config['rate_limits']['mcp'], 'the MCP endpoint is limited per credential out of the box');
     }
 
     public function testAnUnknownDefaultScopeFailsTheBuild(): void

@@ -9,6 +9,7 @@ namespace Koh\SyliusMcpOAuth\Security;
 
 use Doctrine\Persistence\ObjectRepository;
 use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
+use Koh\SyliusMcpOAuth\Http\EndpointRateLimiter;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
 use Sylius\Component\Core\Model\AdminUserInterface;
@@ -37,6 +38,12 @@ use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface
  * security token as attributes, under the names koh/sylius-mcp reads
  * ({@see self::ATTRIBUTE_SCOPES} and siblings): that is how the MCP server
  * learns what the token may do without depending on this package.
+ *
+ * Every authenticated request then spends one unit of the credential's rate
+ * limit (`rate_limits.mcp`). Over the limit the request ends here with a 429
+ * and `Retry-After`, before any tool runs. The check sits after
+ * authentication on purpose: only then is the credential known, and an
+ * unauthenticated request is already answered with a 401.
  */
 final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements AuthenticationEntryPointInterface
 {
@@ -48,6 +55,9 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
 
     public const ATTRIBUTE_AUDIENCE = 'koh_mcp.audience';
 
+    /** The limiter key of {@see EndpointRateLimiter::credentialKey()}; never the bearer value. */
+    public const ATTRIBUTE_RATE_LIMIT_KEY = 'koh_mcp.rate_limit_key';
+
     private const PASSPORT_TOKEN = 'koh_mcp.access_token';
 
     /** @param ObjectRepository<AdminUserInterface> $adminUsers */
@@ -56,6 +66,7 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
         #[Autowire(service: 'sylius.repository.admin_user')]
         private readonly ObjectRepository $adminUsers,
         private readonly ?ResourceIndicator $resource = null,
+        private readonly ?EndpointRateLimiter $rateLimiter = null,
     ) {
     }
 
@@ -102,6 +113,7 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
             $securityToken->setAttribute(self::ATTRIBUTE_CLIENT_ID, $token->getClientId());
             $securityToken->setAttribute(self::ATTRIBUTE_SCOPES, $token->getScopes());
             $securityToken->setAttribute(self::ATTRIBUTE_AUDIENCE, $token->getAudience());
+            $securityToken->setAttribute(self::ATTRIBUTE_RATE_LIMIT_KEY, EndpointRateLimiter::credentialKey($token));
         }
 
         return $securityToken;
@@ -109,6 +121,15 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
 
     public function onAuthenticationSuccess(Request $request, TokenInterface $token, string $firewallName): ?Response
     {
+        // A response here answers the caller instead of running the MCP
+        // controller; that is exactly what an exhausted limit should do.
+        if (null !== $this->rateLimiter && $token->hasAttribute(self::ATTRIBUTE_RATE_LIMIT_KEY)) {
+            $key = $token->getAttribute(self::ATTRIBUTE_RATE_LIMIT_KEY);
+            if (\is_string($key) && '' !== $key) {
+                return $this->rateLimiter->checkCredential($key);
+            }
+        }
+
         return null; // let the request continue to the MCP controller
     }
 
