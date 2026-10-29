@@ -1,3 +1,9 @@
+## [3.1.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.16...v3.1.0) (2026-10-29)
+
+### :sparkles: Features
+
+* **security:** rate limit /_mcp per credential ([1ea0f11](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/1ea0f11ca25634115dfbd21170fb6d654d829381))
+
 ## [3.0.16](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.15...v3.0.16) (2026-10-25)
 
 ### :repeat: Chores
