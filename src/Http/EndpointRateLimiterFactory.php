@@ -13,7 +13,8 @@ use Symfony\Component\RateLimiter\Storage\CacheStorage;
 
 /**
  * Builds the {@see EndpointRateLimiter} from `koh_mcp_oauth.rate_limits`:
- * sliding windows per client address, stored in the given cache pool.
+ * sliding windows per client address (register, token) or per credential
+ * (mcp), stored in the given cache pool.
  */
 final class EndpointRateLimiterFactory
 {

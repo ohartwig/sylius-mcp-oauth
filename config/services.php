@@ -55,7 +55,7 @@ return static function (ContainerConfigurator $container): void {
     $services->set(CorsPolicy::class)
         ->args([param('koh_mcp_oauth.cors_allowed_origins')]);
 
-    // One limiter per endpoint, on the application cache. Built here rather
+    // One limiter per endpoint (register, token, mcp), on the application cache. Built here rather
     // than through framework.rate_limiter so the application needs no
     // configuration for it.
     $services->set(EndpointRateLimiter::class)
@@ -68,6 +68,7 @@ return static function (ContainerConfigurator $container): void {
     // Referenced by name in the application's security.yaml.
     $services->set(McpAccessTokenAuthenticator::class)
         ->arg('$resource', service(ResourceIndicator::class))
+        ->arg('$rateLimiter', service(EndpointRateLimiter::class))
         ->public();
 
     $services->set(CreateMcpTokenCommand::class)->tag('console.command');
@@ -129,6 +130,7 @@ return static function (ContainerConfigurator $container): void {
     }
 
     $services->set(OAuthAuthMethodDescriptor::class)
+        ->args([param('koh_mcp_oauth.rate_limits'), param('koh_mcp_oauth.resource_path')])
         ->tag('koh_agent.auth_method');
 
     $services->set(OAuthEndpointProvider::class)

@@ -13,6 +13,8 @@ use Doctrine\Persistence\ObjectRepository;
 use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
 use Koh\SyliusAgentContracts\Context\AgentContext;
 use Koh\SyliusAgentContracts\Context\AgentContextFactoryInterface;
+use Koh\SyliusMcpOAuth\Http\EndpointRateLimiter;
+use Koh\SyliusMcpOAuth\Http\EndpointRateLimiterFactory;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
 use Sylius\Component\Core\Model\ChannelInterface;
@@ -23,7 +25,15 @@ use PHPUnit\Framework\TestCase;
 use Sylius\Component\Core\Model\AdminUserInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Cache\Adapter\ArrayAdapter;
+use Symfony\Component\EventDispatcher\EventDispatcher;
+use Symfony\Component\RateLimiter\LimiterInterface;
+use Symfony\Component\RateLimiter\RateLimiterFactory;
+use Symfony\Component\RateLimiter\RateLimiterFactoryInterface;
+use Symfony\Component\RateLimiter\Storage\InMemoryStorage;
+use Symfony\Component\Security\Core\Authentication\Token\Storage\TokenStorage;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
+use Symfony\Component\Security\Http\Authentication\AuthenticatorManager;
 
 /**
  * This authenticator turns a bearer token into an admin identity on /_mcp, so
@@ -270,7 +280,100 @@ final class McpAccessTokenAuthenticatorTest extends TestCase
         self::assertNotNull($token->getLastUsedAt());
     }
 
+    /**
+     * AUD-068-F01, the reproduction of the finding: one token in a tight loop
+     * against /_mcp. Run through Symfony's own authenticator manager, so a
+     * response from onAuthenticationSuccess() really ends the request.
+     */
+    public function testATokenOverItsLimitIsAnswered429WithRetryAfter(): void
+    {
+        $manager = $this->firewall($this->authenticator(
+            $this->knownToken($this->persistedToken(1)),
+            rateLimiter: EndpointRateLimiterFactory::create(['mcp' => ['limit' => 3, 'interval' => '1 minute']], new ArrayAdapter()),
+        ));
+
+        for ($i = 0; $i < 3; ++$i) {
+            self::assertNull($this->call($manager, $this->bearerRequest()), 'within the limit the request reaches the MCP controller');
+        }
+        $refused = $this->call($manager, $this->bearerRequest());
+
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $refused?->getStatusCode());
+        self::assertGreaterThan(0, (int) $refused->headers->get('Retry-After'));
+    }
+
+    public function testTwoTokensAreLimitedIndependently(): void
+    {
+        $other = 'tbmcp_'.str_repeat('b', 64);
+        $manager = $this->firewall($this->authenticator(
+            $this->knownToken($this->persistedToken(1)) + $this->knownToken($this->persistedToken(2, $other), $other),
+            rateLimiter: EndpointRateLimiterFactory::create(['mcp' => ['limit' => 1, 'interval' => '1 minute']], new ArrayAdapter()),
+        ));
+
+        self::assertNull($this->call($manager, $this->bearerRequest()));
+        self::assertSame(Response::HTTP_TOO_MANY_REQUESTS, $this->call($manager, $this->bearerRequest())?->getStatusCode());
+        self::assertNull($this->call($manager, $this->bearerRequest($other)), 'the second token still has its whole budget');
+    }
+
+    /** The limiter key goes into the cache; the bearer value must not. */
+    public function testTheRawTokenNeverBecomesALimiterKey(): void
+    {
+        $keys = [];
+        $spy = new class($keys) implements RateLimiterFactoryInterface {
+            /** @param list<string|null> $keys */
+            public function __construct(private array &$keys)
+            {
+            }
+
+            public function create(?string $key = null): LimiterInterface
+            {
+                $this->keys[] = $key;
+
+                return (new RateLimiterFactory(['id' => 'spy', 'policy' => 'sliding_window', 'limit' => 100, 'interval' => '1 minute'], new InMemoryStorage()))->create($key);
+            }
+        };
+        $grant = new McpAccessToken(hash('sha256', self::RAW), 7, 'agent', refreshFamily: str_repeat('f', 32));
+        $manager = $this->firewall($this->authenticator(
+            $this->knownToken($grant),
+            rateLimiter: new EndpointRateLimiter([EndpointRateLimiter::MCP => $spy]),
+        ));
+
+        self::assertNull($this->call($manager, $this->bearerRequest()));
+
+        self::assertSame(['grant:'.str_repeat('f', 32)], $keys);
+        self::assertStringNotContainsString(self::RAW, (string) $keys[0]);
+    }
+
+    /** No limiter configured (or limit 0): the authenticator behaves as before. */
+    public function testWithoutALimiterEveryAuthenticatedRequestContinues(): void
+    {
+        $manager = $this->firewall($this->authenticator($this->knownToken($this->persistedToken(1))));
+
+        for ($i = 0; $i < 20; ++$i) {
+            self::assertNull($this->call($manager, $this->bearerRequest()));
+        }
+    }
+
     // --- helpers -------------------------------------------------------------
+
+    private function persistedToken(int $id, string $raw = self::RAW): McpAccessToken
+    {
+        $token = new McpAccessToken(hash('sha256', $raw), 7, 'agent');
+        (new \ReflectionProperty(McpAccessToken::class, 'id'))->setValue($token, $id);
+
+        return $token;
+    }
+
+    private function firewall(McpAccessTokenAuthenticator $authenticator): AuthenticatorManager
+    {
+        return new AuthenticatorManager([$authenticator], new TokenStorage(), new EventDispatcher(), 'mcp');
+    }
+
+    private function call(AuthenticatorManager $manager, Request $request): ?Response
+    {
+        self::assertNotFalse($manager->supports($request));
+
+        return $manager->authenticateRequest($request);
+    }
 
     private function resource(): ResourceIndicator
     {
@@ -347,11 +450,13 @@ final class McpAccessTokenAuthenticatorTest extends TestCase
         ?AdminUserInterface $admin = null,
         bool $adminExists = true,
         ?ResourceIndicator $resource = null,
+        ?EndpointRateLimiter $rateLimiter = null,
     ): McpAccessTokenAuthenticator {
         return new McpAccessTokenAuthenticator(
             $this->manager($tokensByHash ?? []),
             $this->adminRepository($adminExists ? ($admin ?? $this->admin()) : null),
             $resource,
+            $rateLimiter,
         );
     }
 

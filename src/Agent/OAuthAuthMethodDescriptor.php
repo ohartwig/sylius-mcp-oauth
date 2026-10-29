@@ -20,9 +20,20 @@ use Koh\SyliusAgentContracts\Provider\AuthMethodDescriptorInterface;
  * "agent_auth metadata was not found" even though the block is present and
  * otherwise complete. The semantics match — the token asserts the identity of
  * the admin who authorised it.
+ *
+ * The rate limits are printed from `koh_mcp_oauth.rate_limits`, the same
+ * values the limiter enforces, so the document cannot promise a limit the
+ * shop does not have (AUD-068-F01): a limit set to 0 is not mentioned.
  */
 final class OAuthAuthMethodDescriptor implements AuthMethodDescriptorInterface
 {
+    /** @param array<string, array{limit?: int, interval?: string}> $rateLimits `koh_mcp_oauth.rate_limits` */
+    public function __construct(
+        private readonly array $rateLimits = [],
+        private readonly string $resourcePath = '/_mcp',
+    ) {
+    }
+
     public function getAuthMethodDescriptor(AgentContext $context): AuthMethodDescriptor
     {
         return new AuthMethodDescriptor(
@@ -86,6 +97,42 @@ final class OAuthAuthMethodDescriptor implements AuthMethodDescriptorInterface
             ### Revoke
 
                 POST {$context->url('/mcp/oauth/revoke')}
-            MARKDOWN;
+            MARKDOWN.$this->rateLimitSection($context);
+    }
+
+    private function rateLimitSection(AgentContext $context): string
+    {
+        $lines = [];
+        if (null !== $mcp = $this->limit('mcp')) {
+            $lines[] = \sprintf(
+                '- `%s`: %s per credential. Every access token from one authorisation counts against the same limit; refreshing does not reset it.',
+                $context->url($this->resourcePath),
+                $mcp,
+            );
+        }
+        if (null !== $token = $this->limit('token')) {
+            $lines[] = \sprintf('- Token endpoint: %s per client address.', $token);
+        }
+        if (null !== $register = $this->limit('register')) {
+            $lines[] = \sprintf('- Registration: %s per client address.', $register);
+        }
+        if ([] === $lines) {
+            return '';
+        }
+
+        return "\n\n### Rate limits\n\n"
+            .implode("\n", $lines)
+            ."\n\nOver a limit the answer is `429` with `Retry-After`; wait that long before retrying.";
+    }
+
+    private function limit(string $endpoint): ?string
+    {
+        $limit = $this->rateLimits[$endpoint]['limit'] ?? 0;
+        if ($limit < 1) {
+            return null;
+        }
+
+        // Same interval fallback as EndpointRateLimiterFactory.
+        return \sprintf('%d requests per %s', $limit, $this->rateLimits[$endpoint]['interval'] ?? '1 hour');
     }
 }

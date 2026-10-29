@@ -159,7 +159,8 @@ and CLI tokens carry no audience and keep working.
 koh_mcp_oauth:
     rate_limits:
         register: { limit: 10, interval: '1 hour' }   # per client address; 0 = off
-        token: { limit: 30, interval: '1 minute' }
+        token: { limit: 30, interval: '1 minute' }    # per client address
+        mcp: { limit: 300, interval: '1 minute' }     # per credential on /_mcp
     cors_allowed_origins:
         - 'https://inspector.example.com'           # browser-based MCP clients only
 ```
@@ -169,6 +170,22 @@ endpoint is limited against guessing. Over the limit: `429` with
 `Retry-After`. The limits key on the client address — set
 `framework.trusted_proxies` behind an ingress, or every request shares the
 proxy's address and one budget.
+
+`mcp` limits requests to the MCP endpoint per credential, not per address: a
+leaked token is throttled wherever it is used from, and agents that share an
+egress address (a hosted connector) do not share a budget. The key is the
+authorisation the token came from — every access token from one consent,
+refreshed or not, spends the same budget — or the token's id for CLI tokens;
+never the bearer value. The default, 300 requests in a sliding minute (5 per
+second sustained), is far above what an agent working through tools sends and
+caps a stolen token at 18,000 calls an hour instead of as many as the server
+answers. Requests without a valid token are answered `401` by the firewall
+and are not counted. The limiter state lives in `cache.app`; with more than
+one replica that pool must be shared (Redis, for example), or each replica
+keeps its own budget.
+
+`/auth.md` and the `agent_auth` metadata state these limits as configured; a
+limit set to `0` is not mentioned.
 
 The token, registration and revocation endpoints no longer answer
 `Access-Control-Allow-Origin: *`; only listed origins get CORS headers.
