@@ -1,3 +1,9 @@
+## [3.1.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.1.0...v3.1.1) (2026-10-30)
+
+### :bug: Fixes
+
+* **deps:** update composer packages ([c258f4a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/c258f4aa18288601b44cb98855b7af407ef2f90b))
+
 ## [3.1.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.0.16...v3.1.0) (2026-10-29)
 
 ### :sparkles: Features
