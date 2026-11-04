@@ -1,3 +1,9 @@
+## [3.1.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.1.2...v3.1.3) (2026-11-04)
+
+### :bug: Fixes
+
+* **security:** refuse a disabled administrator's MCP tokens ([6a008af](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/6a008af151a2e03785e258ce5c4fcff33b2eb133))
+
 ## [3.1.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.1.1...v3.1.2) (2026-11-01)
 
 ### :repeat: Chores
