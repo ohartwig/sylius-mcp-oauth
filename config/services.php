@@ -26,6 +26,7 @@ use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
 use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use Koh\SyliusMcpOAuth\OAuth\RefreshTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
+use Koh\SyliusMcpOAuth\Security\AccountStatusGuard;
 use Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator;
 use Sylius\Bundle\UiBundle\Menu\Event\MenuBuilderEvent;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -65,10 +66,16 @@ return static function (ContainerConfigurator $container): void {
             service('cache.app'),
         ]);
 
+    // Runs Sylius's EnabledUserChecker (when Sylius is there) on the token's
+    // administrator, for the bearer firewall and the token endpoint alike.
+    $services->set(AccountStatusGuard::class)
+        ->args([service('sylius.user_checker.enabled')->nullOnInvalid()]);
+
     // Referenced by name in the application's security.yaml.
     $services->set(McpAccessTokenAuthenticator::class)
         ->arg('$resource', service(ResourceIndicator::class))
         ->arg('$rateLimiter', service(EndpointRateLimiter::class))
+        ->arg('$accountStatus', service(AccountStatusGuard::class))
         ->public();
 
     $services->set(CreateMcpTokenCommand::class)->tag('console.command');
@@ -91,6 +98,8 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$resource', service(ResourceIndicator::class))
         ->arg('$rateLimiter', service(EndpointRateLimiter::class))
         ->arg('$corsPolicy', service(CorsPolicy::class))
+        ->arg('$adminUsers', service('sylius.repository.admin_user'))
+        ->arg('$accountStatus', service(AccountStatusGuard::class))
         ->public()
         ->tag('controller.service_arguments');
 

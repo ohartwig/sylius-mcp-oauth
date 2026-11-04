@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 namespace Koh\SyliusMcpOAuth\Controller;
 
+use Doctrine\Persistence\ObjectRepository;
 use Koh\SyliusMcpOAuth\Http\CorsPolicy;
 use Koh\SyliusMcpOAuth\Http\EndpointRateLimiter;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
@@ -14,10 +15,13 @@ use Koh\SyliusMcpOAuth\OAuth\OAuthException;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
 use Koh\SyliusMcpOAuth\OAuth\RefreshTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\ResourceIndicator;
+use Koh\SyliusMcpOAuth\Security\AccountStatusGuard;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\Security\Core\Exception\AccountStatusException;
+use Symfony\Component\Security\Core\User\UserInterface;
 
 /**
  * OAuth token endpoint (RFC 6749 §4.1.3, §6). Exchanges an authorization code
@@ -34,12 +38,19 @@ use Symfony\Component\HttpFoundation\Response;
  * The token is bound to the resource of the authorization (RFC 8707). A
  * `resource` parameter here must name the same resource, or the request fails
  * with invalid_target.
+ *
+ * Before any token is minted — from a code or from a refresh — the
+ * administrator the grant belongs to is loaded and checked
+ * ({@see AccountStatusGuard}): a disabled or deleted account gets
+ * invalid_grant, and a refresh for it also ends the refresh-token family
+ * (AUD-011-F01).
  */
 final class TokenController extends AbstractController
 {
     /** Matches the bundle configuration default. */
     public const DEFAULT_ACCESS_TOKEN_TTL = 3600;
 
+    /** @param ObjectRepository<object>|null $adminUsers the Sylius admin users; null skips the account check (unit tests only) */
     public function __construct(
         private readonly int $accessTokenTtl = self::DEFAULT_ACCESS_TOKEN_TTL,
         private readonly int $refreshTokenTtl = 0,
@@ -47,6 +58,8 @@ final class TokenController extends AbstractController
         private readonly ?ResourceIndicator $resource = null,
         private readonly EndpointRateLimiter $rateLimiter = new EndpointRateLimiter(),
         private readonly CorsPolicy $corsPolicy = new CorsPolicy(),
+        private readonly ?ObjectRepository $adminUsers = null,
+        private readonly AccountStatusGuard $accountStatus = new AccountStatusGuard(),
     ) {
         if ($accessTokenTtl < 1) {
             throw new \InvalidArgumentException('access_token_ttl must be a positive number of seconds.');
@@ -73,6 +86,7 @@ final class TokenController extends AbstractController
                     ? 'Only authorization_code is supported.'
                     : 'Only authorization_code and refresh_token are supported.'),
             };
+            $this->assertAccountMayAct($grant);
         } catch (OAuthException $e) {
             return $this->fail($request, $e->error, $e->getMessage());
         }
@@ -167,6 +181,37 @@ final class TokenController extends AbstractController
             'resource' => $spent->getAudience(),
             'family' => $spent->getFamily(),
         ];
+    }
+
+    /**
+     * @param array{admin_user_id: int, family: string|null} $grant
+     */
+    private function assertAccountMayAct(array $grant): void
+    {
+        if (null === $this->adminUsers) {
+            return;
+        }
+
+        $user = $this->adminUsers->find($grant['admin_user_id']);
+        $refused = !$user instanceof UserInterface;
+        if (!$refused) {
+            try {
+                $this->accountStatus->check($user);
+            } catch (AccountStatusException) {
+                $refused = true;
+            }
+        }
+
+        if ($refused) {
+            // The rotation already spent the presented refresh token; the
+            // rest of the family goes with it, so re-enabling the account
+            // does not bring an old agent session back.
+            if (null !== $grant['family'] && null !== $this->refreshTokens) {
+                $this->refreshTokens->revokeFamily($grant['family']);
+            }
+
+            throw new OAuthException('invalid_grant', 'The administrator of this grant may not sign in.');
+        }
     }
 
     private function assertResource(Request $request, ?string $bound): void

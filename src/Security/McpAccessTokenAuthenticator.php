@@ -18,6 +18,7 @@ use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
+use Symfony\Component\Security\Core\Exception\AccountStatusException;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\CustomUserMessageAuthenticationException;
 use Symfony\Component\Security\Core\User\UserInterface;
@@ -44,6 +45,11 @@ use Symfony\Component\Security\Http\EntryPoint\AuthenticationEntryPointInterface
  * and `Retry-After`, before any tool runs. The check sits after
  * authentication on purpose: only then is the credential known, and an
  * unauthenticated request is already answered with a 401.
+ *
+ * The token's administrator must still be allowed to act: a disabled account
+ * (or whatever else the application's user checker refuses) ends the request
+ * with a 401, the same as an unknown token ({@see AccountStatusGuard},
+ * AUD-011-F01).
  */
 final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements AuthenticationEntryPointInterface
 {
@@ -67,6 +73,7 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
         private readonly ObjectRepository $adminUsers,
         private readonly ?ResourceIndicator $resource = null,
         private readonly ?EndpointRateLimiter $rateLimiter = null,
+        private readonly AccountStatusGuard $accountStatus = new AccountStatusGuard(),
     ) {
     }
 
@@ -95,6 +102,12 @@ final class McpAccessTokenAuthenticator extends AbstractAuthenticator implements
         $user = $this->adminUsers->find($token->getAdminUserId());
         if (!$user instanceof UserInterface) {
             throw new CustomUserMessageAuthenticationException('The MCP token owner no longer exists.');
+        }
+
+        try {
+            $this->accountStatus->check($user);
+        } catch (AccountStatusException) {
+            throw new CustomUserMessageAuthenticationException('The MCP token owner may not sign in.');
         }
 
         $passport = new SelfValidatingPassport(new UserBadge($user->getUserIdentifier(), static fn (): UserInterface => $user));
