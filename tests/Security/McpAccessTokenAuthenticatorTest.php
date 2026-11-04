@@ -406,6 +406,7 @@ final class McpAccessTokenAuthenticatorTest extends TestCase
     {
         $admin = $this->createStub(AdminUserInterface::class);
         $admin->method('getUserIdentifier')->willReturn($identifier);
+        $admin->method('isEnabled')->willReturn(true);
 
         return $admin;
     }

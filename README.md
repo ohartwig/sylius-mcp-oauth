@@ -38,6 +38,9 @@ security:
             pattern: ^/_mcp
             stateless: true
             provider: sylius_admin_user_provider
+            # Sylius's EnabledUserChecker, tagged for this chain by the bundle:
+            # a disabled administrator's agent is refused like the person.
+            user_checker: security.user_checker.chain.mcp
             custom_authenticators:
                 - Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator
             entry_point: Koh\SyliusMcpOAuth\Security\McpAccessTokenAuthenticator
@@ -55,6 +58,17 @@ security:
 
 **The `access_control` rule for `^/_mcp` is not optional.** The firewall
 alone does not refuse a request without a token.
+
+**Disabling an administrator stops their agent.** The bearer authenticator
+and the token endpoint both check the token's administrator with Sylius's
+`EnabledUserChecker` (and, without Sylius's checker, with `isEnabled()`): a
+disabled account answers 401 at `/_mcp`, and its refresh token answers
+`invalid_grant` and ends the refresh-token family. The bundle tags the checker
+for `security.user_checker.mcp`, so the firewall line above is all an
+installation adds; the authenticator checks even without it. Disabling does
+not delete the access tokens: they stay refused while the account is off and
+work again until they expire if it is re-enabled. To end an agent session for
+good, revoke the tokens under `/admin/mcp/access-tokens` as well.
 
 The entity mapping and, from 3.0, the bundle's migrations register themselves
 — no `doctrine.yaml` or `doctrine_migrations.yaml` edit needed. Run

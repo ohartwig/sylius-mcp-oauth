@@ -19,7 +19,9 @@ use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
 use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
 use Koh\SyliusMcpOAuth\OAuth\RefreshTokenManager;
+use Doctrine\Persistence\ObjectRepository;
 use PHPUnit\Framework\TestCase;
+use Sylius\Component\Core\Model\AdminUser;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -38,6 +40,9 @@ final class TokenRefreshTest extends TestCase
 
     /** @var list<object> */
     private array $persisted = [];
+
+    /** @var list<string> DQL the controller ran */
+    private array $queries = [];
 
     public function testTheCodeExchangeReturnsARefreshToken(): void
     {
@@ -92,6 +97,50 @@ final class TokenRefreshTest extends TestCase
     }
 
     /**
+     * AUD-011-F01: the refresh grant took the administrator id from the spent
+     * refresh token and minted a new pair without loading the account, so a
+     * disabled administrator's agent kept renewing its access.
+     */
+    public function testF01ARefreshForADisabledAdministratorIsInvalidGrant(): void
+    {
+        $body = $this->call($this->refreshRequest(), Response::HTTP_BAD_REQUEST, admin: $this->administrator(enabled: false));
+
+        self::assertSame('invalid_grant', $body['error']);
+        self::assertArrayNotHasKey('access_token', $body);
+        self::assertSame([], array_filter($this->persisted, static fn (object $e): bool => $e instanceof McpAccessToken), 'no access token is minted');
+        self::assertNotSame([], array_filter($this->queries, static fn (string $dql): bool => str_contains($dql, 'WHERE r.family = :family')), 'the refresh-token family is revoked');
+    }
+
+    public function testF01ARefreshForADeletedAdministratorIsInvalidGrant(): void
+    {
+        $body = $this->call($this->refreshRequest(), Response::HTTP_BAD_REQUEST, admin: false);
+
+        self::assertSame('invalid_grant', $body['error']);
+    }
+
+    public function testF01ACodeExchangeForADisabledAdministratorIsInvalidGrant(): void
+    {
+        $body = $this->call($this->codeRequest(), Response::HTTP_BAD_REQUEST, admin: $this->administrator(enabled: false));
+
+        self::assertSame('invalid_grant', $body['error']);
+    }
+
+    public function testF01AnEnabledAdministratorStillRefreshes(): void
+    {
+        $body = $this->call($this->refreshRequest(), admin: $this->administrator(enabled: true));
+
+        self::assertStringStartsWith('tbmcp_', $body['access_token']);
+    }
+
+    private function administrator(bool $enabled): AdminUser
+    {
+        $admin = new AdminUser();
+        $admin->setEnabled($enabled);
+
+        return $admin;
+    }
+
+    /**
      * @param array<string, string> $overrides
      */
     private function refreshRequest(array $overrides = []): Request
@@ -115,12 +164,22 @@ final class TokenRefreshTest extends TestCase
         ], server: ['REMOTE_ADDR' => '203.0.113.9']);
     }
 
-    /** @return array<string, mixed> */
-    private function call(Request $request, int $status = Response::HTTP_OK, int $refreshTtl = 86400): array
+    /**
+     * @param AdminUser|false|null $admin null: no account check wired; false: the account is gone
+     *
+     * @return array<string, mixed>
+     */
+    private function call(Request $request, int $status = Response::HTTP_OK, int $refreshTtl = 86400, AdminUser|false|null $admin = null): array
     {
         $this->persisted = [];
+        $this->queries = [];
         $entityManager = $this->entityManager();
-        $controller = new TokenController(3600, $refreshTtl, new RefreshTokenManager($entityManager));
+        $admins = null;
+        if (null !== $admin) {
+            $admins = $this->createStub(ObjectRepository::class);
+            $admins->method('find')->willReturn(false === $admin ? null : $admin);
+        }
+        $controller = new TokenController(3600, $refreshTtl, new RefreshTokenManager($entityManager), adminUsers: $admins);
 
         $response = $controller(
             $request,
@@ -184,7 +243,11 @@ final class TokenRefreshTest extends TestCase
 
         $entityManager = $this->createStub(EntityManagerInterface::class);
         $entityManager->method('getRepository')->willReturnCallback(fn (string $class): EntityRepository => $repositories[$class] ?? $this->createStub(EntityRepository::class));
-        $entityManager->method('createQuery')->willReturn($query);
+        $entityManager->method('createQuery')->willReturnCallback(function (string $dql = '') use ($query): Query {
+            $this->queries[] = $dql;
+
+            return $query;
+        });
         $entityManager->method('persist')->willReturnCallback(function (object $entity): void {
             $this->persisted[] = $entity;
         });

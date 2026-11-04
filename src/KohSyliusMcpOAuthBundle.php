@@ -10,6 +10,7 @@ namespace Koh\SyliusMcpOAuth;
 use Koh\SyliusMcpOAuth\OAuth\OAuthException;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
 use Koh\SyliusMcpOAuth\OAuth\RedirectUriPolicy;
+use Koh\SyliusMcpOAuth\DependencyInjection\McpUserCheckerPass;
 use Symfony\Component\Config\Definition\Configurator\DefinitionConfigurator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ContainerConfigurator;
@@ -21,6 +22,13 @@ use Symfony\Component\HttpKernel\Bundle\AbstractBundle;
 final class KohSyliusMcpOAuthBundle extends AbstractBundle
 {
     protected string $extensionAlias = 'koh_mcp_oauth';
+
+    /** Tags Sylius's EnabledUserChecker for the `mcp` firewall (AUD-011-F01). */
+    public function build(ContainerBuilder $container): void
+    {
+        parent::build($container);
+        $container->addCompilerPass(new McpUserCheckerPass());
+    }
 
     /** config/ sits at the package root, not under src/. */
     public function getPath(): string
