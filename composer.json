@@ -31,7 +31,7 @@
         "doctrine/doctrine-bundle": "^2.19.3",
         "doctrine/orm": "^3.6.9",
         "doctrine/persistence": "^3.0 || ^4.0",
-        "koh/sylius-agent-contracts": "^1.1",
+        "koh/sylius-agent-contracts": "^1.4",
         "psr/cache": "^2.0 || ^3.0",
         "psr/log": "^3.0.2",
         "sylius/sylius": "^2.2.9 || ^2.3.0",

@@ -8,6 +8,7 @@ declare(strict_types=1);
 namespace Koh\SyliusMcpOAuth\Admin;
 
 use Doctrine\Persistence\ObjectRepository;
+use Koh\SyliusMcpOAuth\Agent\AgentRegistrationManager;
 use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
@@ -30,7 +31,8 @@ use Symfony\Component\HttpFoundation\Response;
  * `koh_mcp_oauth.admin.overview_role` see and revoke everyone's.
  *
  * Revoking a token that came from a refresh-token family revokes the family:
- * otherwise the client would simply refresh it back.
+ * otherwise the client would simply refresh it back. Likewise, revoking a
+ * token of an auth.md agent registration revokes the registration.
  *
  * Under /admin, so the admin firewall covers it.
  */
@@ -48,6 +50,7 @@ final class TokenAdminController extends AbstractController
         private readonly ObjectRepository $adminUsers,
         private readonly ?RefreshTokenManager $refreshTokens = null,
         private readonly ?string $overviewRole = null,
+        private readonly ?AgentRegistrationManager $agentRegistrations = null,
     ) {
     }
 
@@ -101,6 +104,12 @@ final class TokenAdminController extends AbstractController
         $this->tokens->revoke($token);
         if (null !== $token->getRefreshFamily()) {
             $this->refreshTokens?->revokeFamily($token->getRefreshFamily());
+        }
+        // A token of an agent registration: end the registration too, or the
+        // agent would mint the next token from its identity assertion.
+        $clientId = (string) $token->getClientId();
+        if (str_starts_with($clientId, 'reg_')) {
+            $this->agentRegistrations?->revoke($clientId);
         }
 
         $this->addFlash('success', 'admin.tokens.revoked');

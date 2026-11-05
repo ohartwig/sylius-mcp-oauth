@@ -8,6 +8,9 @@ declare(strict_types=1);
 namespace Koh\SyliusMcpOAuth\Controller;
 
 use Doctrine\Persistence\ObjectRepository;
+use Koh\SyliusAgentContracts\Context\AgentContextFactoryInterface;
+use Koh\SyliusMcpOAuth\Agent\AgentRegistrationManager;
+use Koh\SyliusMcpOAuth\Entity\McpAgentRegistration;
 use Koh\SyliusMcpOAuth\Http\CorsPolicy;
 use Koh\SyliusMcpOAuth\Http\EndpointRateLimiter;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
@@ -44,11 +47,22 @@ use Symfony\Component\Security\Core\User\UserInterface;
  * ({@see AccountStatusGuard}): a disabled or deleted account gets
  * invalid_grant, and a refresh for it also ends the refresh-token family
  * (AUD-011-F01).
+ *
+ * Two more grants serve the auth.md agent registration
+ * ({@see AgentRegistrationManager}): the claim grant, polled by an agent until
+ * an administrator has claimed its registration, and the RFC 7523 jwt-bearer
+ * grant, which exchanges the post-claim identity assertion for a fresh access
+ * token. Both mint tokens for the claiming administrator only; an unclaimed
+ * registration never gets one.
  */
 final class TokenController extends AbstractController
 {
     /** Matches the bundle configuration default. */
     public const DEFAULT_ACCESS_TOKEN_TTL = 3600;
+
+    public const GRANT_JWT_BEARER = 'urn:ietf:params:oauth:grant-type:jwt-bearer';
+
+    public const GRANT_AGENT_CLAIM = 'urn:workos:agent-auth:grant-type:claim';
 
     /** @param ObjectRepository<object>|null $adminUsers the Sylius admin users; null skips the account check (unit tests only) */
     public function __construct(
@@ -60,6 +74,9 @@ final class TokenController extends AbstractController
         private readonly CorsPolicy $corsPolicy = new CorsPolicy(),
         private readonly ?ObjectRepository $adminUsers = null,
         private readonly AccountStatusGuard $accountStatus = new AccountStatusGuard(),
+        private readonly ?AgentRegistrationManager $agentRegistrations = null,
+        private readonly ?AgentContextFactoryInterface $contextFactory = null,
+        private readonly bool $agentRegistrationEnabled = true,
     ) {
         if ($accessTokenTtl < 1) {
             throw new \InvalidArgumentException('access_token_ttl must be a positive number of seconds.');
@@ -77,15 +94,21 @@ final class TokenController extends AbstractController
         }
 
         $grantType = (string) $request->request->get('grant_type', '');
+        $agentRegistration = null;
 
         try {
-            $grant = match ($grantType) {
-                'authorization_code' => $this->authorizationCode($request, $server),
-                'refresh_token' => $this->refresh($request),
-                default => throw new OAuthException('unsupported_grant_type', null === $this->refreshTokens || 0 === $this->refreshTokenTtl
-                    ? 'Only authorization_code is supported.'
-                    : 'Only authorization_code and refresh_token are supported.'),
-            };
+            if ($this->agentGrantsEnabled() && \in_array($grantType, [self::GRANT_AGENT_CLAIM, self::GRANT_JWT_BEARER], true)) {
+                $agentRegistration = self::GRANT_AGENT_CLAIM === $grantType
+                    ? $this->agentRegistrations->redeemClaim((string) $request->request->get('claim_token', ''))
+                    : $this->agentRegistrations->exchange((string) $request->request->get('assertion', ''));
+                $grant = $this->agentGrant($request, $agentRegistration);
+            } else {
+                $grant = match ($grantType) {
+                    'authorization_code' => $this->authorizationCode($request, $server),
+                    'refresh_token' => $this->refresh($request),
+                    default => throw new OAuthException('unsupported_grant_type', \sprintf('Supported grant types: %s.', implode(', ', $this->supportedGrantTypes()))),
+                };
+            }
             $this->assertAccountMayAct($grant);
         } catch (OAuthException $e) {
             return $this->fail($request, $e->error, $e->getMessage());
@@ -122,7 +145,72 @@ final class TokenController extends AbstractController
             )['token'];
         }
 
+        // AUTH.md Step 4c: the claim grant also returns the post-claim
+        // assertion, the agent's way to mint the next access token.
+        if (null !== $agentRegistration && self::GRANT_AGENT_CLAIM === $grantType && $this->agentGrantsEnabled()) {
+            $assertion = $this->agentRegistrations->postClaimAssertion($agentRegistration, $this->issuer($request));
+            $body['identity_assertion'] = $assertion['assertion'];
+            $body['assertion_expires'] = $assertion['expires'];
+        }
+
         return $this->cors($request, new JsonResponse($body));
+    }
+
+    /** @phpstan-assert-if-true !null $this->agentRegistrations */
+    private function agentGrantsEnabled(): bool
+    {
+        return $this->agentRegistrationEnabled && null !== $this->agentRegistrations;
+    }
+
+    /** @return list<string> */
+    private function supportedGrantTypes(): array
+    {
+        $types = ['authorization_code'];
+        if (null !== $this->refreshTokens && $this->refreshTokenTtl > 0) {
+            $types[] = 'refresh_token';
+        }
+        if ($this->agentGrantsEnabled()) {
+            $types[] = self::GRANT_JWT_BEARER;
+            $types[] = self::GRANT_AGENT_CLAIM;
+        }
+
+        return $types;
+    }
+
+    /**
+     * @return array{admin_user_id: int, name: string, scopes: list<string>, client_id: string, resource: string|null, family: string|null}
+     */
+    private function agentGrant(Request $request, McpAgentRegistration $registration): array
+    {
+        $adminUserId = $registration->getAdminUserId();
+        if (null === $adminUserId) {
+            throw new OAuthException('invalid_grant', 'The registration is not claimed.');
+        }
+
+        $resource = $this->resource?->canonical($request);
+        $this->assertResource($request, $resource);
+
+        return [
+            'admin_user_id' => $adminUserId,
+            'name' => \sprintf('Agent %s (%s)', $registration->getRegistrationId(), $registration->getType()),
+            'scopes' => $registration->getScopes(),
+            'client_id' => $registration->getRegistrationId(),
+            'resource' => $resource,
+            'family' => null,
+        ];
+    }
+
+    private function issuer(Request $request): string
+    {
+        if (null !== $this->contextFactory) {
+            try {
+                return $this->contextFactory->create()->baseUrl;
+            } catch (\Throwable) {
+                // No channel resolvable: fall back to the request.
+            }
+        }
+
+        return $request->getSchemeAndHttpHost();
     }
 
     /**

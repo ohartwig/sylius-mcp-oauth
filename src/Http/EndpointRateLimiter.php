@@ -42,10 +42,14 @@ final class EndpointRateLimiter
     ) {
     }
 
-    /** null when the request may proceed; otherwise the 429 to send. */
-    public function check(string $endpoint, Request $request): ?Response
+    /**
+     * null when the request may proceed; otherwise the 429 to send.
+     *
+     * @param string $error the error code of the 429 body; the auth.md endpoints use `rate_limited`
+     */
+    public function check(string $endpoint, Request $request, string $error = 'too_many_requests'): ?Response
     {
-        return $this->consume($endpoint, $request->getClientIp() ?? 'unknown', 'Too many requests from this address. Retry later.');
+        return $this->consume($endpoint, $request->getClientIp() ?? 'unknown', 'Too many requests from this address. Retry later.', $error);
     }
 
     /**
@@ -87,7 +91,7 @@ final class EndpointRateLimiter
         return 'hash:'.$token->getTokenHash();
     }
 
-    private function consume(string $endpoint, string $key, string $message): ?Response
+    private function consume(string $endpoint, string $key, string $message, string $error = 'too_many_requests'): ?Response
     {
         $factory = $this->limiters[$endpoint] ?? null;
         if (null === $factory) {
@@ -102,7 +106,7 @@ final class EndpointRateLimiter
         $retryAfter = max(1, $limit->getRetryAfter()->getTimestamp() - time());
 
         return new JsonResponse(
-            ['error' => 'too_many_requests', 'error_description' => $message],
+            ['error' => $error, 'error_description' => $message],
             Response::HTTP_TOO_MANY_REQUESTS,
             ['Retry-After' => (string) $retryAfter, 'Cache-Control' => 'no-store'],
         );
