@@ -382,6 +382,7 @@ existing clients out, so read this before deploying.
    SELECT id, name, admin_user_id, created_at FROM app_mcp_access_token
     WHERE expires_at IS NULL AND revoked = 0;
    ```
+
 4. **The consent template is now the bundle's.** 1.x rendered
    `mcp/oauth/authorize.html.twig` from the application; 2.0 renders
    `@KohSyliusMcpOAuth/oauth/authorize.html.twig`. Move a custom template to
