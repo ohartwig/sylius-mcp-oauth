@@ -10,6 +10,10 @@ use Koh\SyliusAgentContracts\Http\AgentJsonResponder;
 use Koh\SyliusAgentContracts\Registry\AuthMethodRegistry;
 use Koh\SyliusMcpOAuth\Admin\AdminMenuListener;
 use Koh\SyliusMcpOAuth\Admin\TokenAdminController;
+use Koh\SyliusMcpOAuth\Controller\AgentClaimController;
+use Koh\SyliusMcpOAuth\Controller\AgentIdentityController;
+use Koh\SyliusMcpOAuth\Agent\AgentRegistrationManager;
+use Koh\SyliusMcpOAuth\Agent\IdentityAssertionSigner;
 use Koh\SyliusMcpOAuth\Agent\OAuthAuthMethodDescriptor;
 use Koh\SyliusMcpOAuth\Agent\OAuthEndpointProvider;
 use Koh\SyliusMcpOAuth\Command\CreateMcpTokenCommand;
@@ -80,6 +84,37 @@ return static function (ContainerConfigurator $container): void {
 
     $services->set(CreateMcpTokenCommand::class)->tag('console.command');
 
+    // auth.md agent registration. The assertion key derives from the
+    // application secret, so there is nothing to configure.
+    $services->set(IdentityAssertionSigner::class)
+        ->args([param('kernel.secret')]);
+
+    $services->set(AgentRegistrationManager::class)
+        ->args([
+            service('doctrine.orm.entity_manager'),
+            service(IdentityAssertionSigner::class),
+            param('koh_mcp_oauth.default_scopes'),
+            param('koh_mcp_oauth.agent_registration.claim_ttl'),
+            param('koh_mcp_oauth.agent_registration.assertion_ttl'),
+        ])
+        ->public();
+
+    $services->set(AgentIdentityController::class)
+        ->args([
+            service(AgentRegistrationManager::class),
+            service(AgentContextFactoryInterface::class),
+            service(EndpointRateLimiter::class),
+            service(CorsPolicy::class),
+            param('koh_mcp_oauth.agent_registration.enabled'),
+        ])
+        ->public()
+        ->tag('controller.service_arguments');
+
+    $services->set(AgentClaimController::class)
+        ->args([service(AgentRegistrationManager::class), param('koh_mcp_oauth.agent_registration.enabled')])
+        ->public()
+        ->tag('controller.service_arguments');
+
     $services->set(MetadataController::class)
         ->args([
             service(AgentContextFactoryInterface::class),
@@ -87,6 +122,7 @@ return static function (ContainerConfigurator $container): void {
             service(AgentJsonResponder::class),
             param('koh_mcp_oauth.resource_path'),
             param('koh_mcp_oauth.refresh_tokens_enabled'),
+            param('koh_mcp_oauth.agent_registration.enabled'),
         ])
         ->public()
         ->tag('controller.service_arguments');
@@ -100,6 +136,9 @@ return static function (ContainerConfigurator $container): void {
         ->arg('$corsPolicy', service(CorsPolicy::class))
         ->arg('$adminUsers', service('sylius.repository.admin_user'))
         ->arg('$accountStatus', service(AccountStatusGuard::class))
+        ->arg('$agentRegistrations', service(AgentRegistrationManager::class))
+        ->arg('$agentRegistrationEnabled', param('koh_mcp_oauth.agent_registration.enabled'))
+        ->arg('$contextFactory', service(AgentContextFactoryInterface::class)->nullOnInvalid())
         ->public()
         ->tag('controller.service_arguments');
 
@@ -128,6 +167,7 @@ return static function (ContainerConfigurator $container): void {
             service('sylius.repository.admin_user'),
             service(RefreshTokenManager::class),
             param('koh_mcp_oauth.admin.overview_role'),
+            service(AgentRegistrationManager::class),
         ])
         ->public()
         ->tag('controller.service_arguments');
@@ -139,7 +179,13 @@ return static function (ContainerConfigurator $container): void {
     }
 
     $services->set(OAuthAuthMethodDescriptor::class)
-        ->args([param('koh_mcp_oauth.rate_limits'), param('koh_mcp_oauth.resource_path')])
+        ->args([
+            param('koh_mcp_oauth.rate_limits'),
+            param('koh_mcp_oauth.resource_path'),
+            param('koh_mcp_oauth.agent_registration.enabled'),
+            param('koh_mcp_oauth.default_scopes'),
+            param('koh_mcp_oauth.agent_registration.claim_ttl'),
+        ])
         ->tag('koh_agent.auth_method');
 
     $services->set(OAuthEndpointProvider::class)

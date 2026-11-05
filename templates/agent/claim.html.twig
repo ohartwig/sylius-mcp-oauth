@@ -1,0 +1,93 @@
+{#
+SPDX-FileCopyrightText: 2026 Kai Ole Hartwig <mail@ole-hartwig.eu>
+SPDX-License-Identifier: MIT
+
+Claim page of the auth.md claim ceremony (the verification_uri). Override it at
+templates/bundles/KohSyliusMcpOAuthBundle/agent/claim.html.twig.
+
+`state` is one of: form, wrong_code, claimed, invalid, invalid_csrf, expired,
+locked, wrong_account. An override must keep, for form and wrong_code: the POST
+to path('mcp_oauth_agent_claim'), the _csrf_token field from csrf_token(csrf_id),
+the claim_attempt_token hidden field and the user_code field.
+#}
+{% trans_default_domain translation_domain %}
+<!doctype html>
+<html lang="{{ app.request.locale|default('en')|replace({'_': '-'}) }}">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex">
+    <title>{{ 'claim.title'|trans }}</title>
+    <style>
+        :root { color-scheme: light dark; --bg: #f5f5f4; --card: #ffffff; --text: #1c1917; --muted: #44403c;
+                --line: #d6d3d1; --accent: #1d4ed8; --accent-text: #ffffff; --focus: #b45309; }
+        @media (prefers-color-scheme: dark) {
+            :root { --bg: #1c1917; --card: #292524; --text: #f5f5f4; --muted: #d6d3d1;
+                    --line: #57534e; --accent: #93c5fd; --accent-text: #0c0a09; --focus: #fbbf24; }
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font: 1rem/1.5 system-ui, sans-serif; background: var(--bg); color: var(--text); }
+        main { max-width: 32rem; margin: 3rem auto; padding: 2rem 1.5rem; background: var(--card);
+               border: 1px solid var(--line); border-radius: .75rem; }
+        h1 { font-size: 1.4rem; margin: 0 0 .5rem; }
+        h2 { font-size: 1rem; margin: 1.5rem 0 .5rem; }
+        p, dd { color: var(--muted); }
+        dl { margin: 0; }
+        dt { font-weight: 600; margin-top: .75rem; }
+        dd { margin: 0; overflow-wrap: anywhere; }
+        ul { margin: 0; padding-left: 1.25rem; }
+        .actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+        button { flex: 1 1 10rem; min-height: 2.75rem; padding: .6rem 1rem; font: inherit; font-weight: 600;
+                 border-radius: .5rem; cursor: pointer; border: 1px solid var(--accent); }
+        .approve { background: var(--accent); color: var(--accent-text); }
+        input { width: 100%; min-height: 2.75rem; padding: .5rem .75rem; font: inherit; font-size: 1.4rem; letter-spacing: .3em;
+                border: 1px solid var(--line); border-radius: .5rem; background: var(--bg); color: var(--text); }
+        input:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+        label { display: block; font-weight: 600; margin-top: 1.5rem; }
+        .error { color: var(--text); font-weight: 600; }
+        button:focus-visible { outline: 3px solid var(--focus); outline-offset: 2px; }
+    </style>
+</head>
+<body>
+<main aria-labelledby="claim-title">
+    <h1 id="claim-title">{{ 'claim.title'|trans }}</h1>
+{% if state in ['form', 'wrong_code'] %}
+    <p>{{ 'claim.intro'|trans }}</p>
+
+    <dl>
+        <dt>{{ 'claim.registration'|trans }}</dt>
+        <dd><code>{{ registration.registrationId }}</code> ({{ registration.type }})</dd>
+        <dt>{{ 'claim.registered_at'|trans }}</dt>
+        <dd>{{ registration.createdAt|date('Y-m-d H:i T') }}{% if registration.createdIp %}, {{ registration.createdIp }}{% endif %}</dd>
+        <dt>{{ 'consent.signed_in_as'|trans }}</dt>
+        <dd>{{ admin_label }}</dd>
+    </dl>
+
+    <h2 id="claim-scopes">{{ 'consent.scopes'|trans }}</h2>
+    <ul aria-labelledby="claim-scopes">
+        {% for scope in scopes %}
+            <li>{{ ('consent.scope.' ~ scope)|trans }}</li>
+        {% endfor %}
+    </ul>
+
+    <p>{{ 'claim.warning'|trans }}</p>
+
+    <form method="post" action="{{ path('mcp_oauth_agent_claim') }}">
+        <input type="hidden" name="_csrf_token" value="{{ csrf_token(csrf_id) }}">
+        <input type="hidden" name="claim_attempt_token" value="{{ claim_attempt_token }}">
+        <label for="user_code">{{ 'claim.user_code'|trans }}</label>
+        <input id="user_code" name="user_code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9 ]{6,7}" maxlength="7" required
+               {% if state == 'wrong_code' %}aria-invalid="true" aria-describedby="claim-error"{% endif %}>
+        {% if state == 'wrong_code' %}
+            <p id="claim-error" class="error" role="alert">{{ 'claim.wrong_code'|trans({'%count%': attempts_left}) }}</p>
+        {% endif %}
+        <div class="actions">
+            <button type="submit" class="approve">{{ 'claim.confirm'|trans }}</button>
+        </div>
+    </form>
+{% else %}
+    <p role="{{ state == 'claimed' ? 'status' : 'alert' }}">{{ ('claim.result.' ~ state)|trans }}</p>
+{% endif %}
+</main>
+</body>
+</html>

@@ -32,6 +32,7 @@ final class MetadataController
         private readonly AgentJsonResponder $responder,
         private readonly string $resourcePath = '/_mcp',
         private readonly bool $refreshTokens = false,
+        private readonly bool $agentRegistration = false,
     ) {
     }
 
@@ -46,7 +47,7 @@ final class MetadataController
             'registration_endpoint' => $context->url('/mcp/oauth/register'),
             'revocation_endpoint' => $context->url('/mcp/oauth/revoke'),
             'response_types_supported' => ['code'],
-            'grant_types_supported' => $this->refreshTokens ? ['authorization_code', 'refresh_token'] : ['authorization_code'],
+            'grant_types_supported' => $this->grantTypes(),
             'code_challenge_methods_supported' => ['S256'],
             'token_endpoint_auth_methods_supported' => ['none'],
             'scopes_supported' => OAuthServer::SUPPORTED_SCOPES,
@@ -61,6 +62,23 @@ final class MetadataController
         }
 
         return $this->responder->respond($metadata, maxAge: 300, request: $request);
+    }
+
+    /** @return list<string> */
+    private function grantTypes(): array
+    {
+        $types = ['authorization_code'];
+        if ($this->refreshTokens) {
+            $types[] = 'refresh_token';
+        }
+        // auth.md: jwt-bearer exchanges the identity assertion, the claim
+        // grant is how an agent polls for the end of the claim ceremony.
+        if ($this->agentRegistration) {
+            $types[] = TokenController::GRANT_JWT_BEARER;
+            $types[] = TokenController::GRANT_AGENT_CLAIM;
+        }
+
+        return $types;
     }
 
     public function protectedResource(Request $request): Response

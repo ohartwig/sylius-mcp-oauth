@@ -12,7 +12,10 @@ use Doctrine\ORM\EntityRepository;
 use Doctrine\ORM\Query;
 use Doctrine\Persistence\ObjectRepository;
 use Koh\SyliusMcpOAuth\Admin\TokenAdminController;
+use Koh\SyliusMcpOAuth\Agent\AgentRegistrationManager;
+use Koh\SyliusMcpOAuth\Agent\IdentityAssertionSigner;
 use Koh\SyliusMcpOAuth\Entity\McpAccessToken;
+use Koh\SyliusMcpOAuth\Tests\Agent\RegistrationStore;
 use Koh\SyliusMcpOAuth\Entity\McpOAuthClient;
 use Koh\SyliusMcpOAuth\OAuth\AccessTokenManager;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
@@ -73,6 +76,42 @@ final class TokenAdminControllerTest extends TestCase
         self::assertCount(2, $this->queries, 'refresh tokens and access tokens of the family');
         self::assertStringContainsString('r.family = :family', $this->queries[0]);
         self::assertStringContainsString('a.refreshFamily = :family', $this->queries[1]);
+    }
+
+    /** Revoking an agent registration's token ends the registration, or its assertion would mint the next. */
+    public function testRevokingAnAgentTokenRevokesItsRegistration(): void
+    {
+        $store = new RegistrationStore();
+        $registrations = new AgentRegistrationManager($store->entityManager($this), new IdentityAssertionSigner('s'));
+        $body = $registrations->register('anonymous', null, null, 'https://shop.example', 'https://shop.example/c', 'https://shop.example/v');
+        $this->token = new McpAccessToken(hash('sha256', 'y'), 7, 'Agent', ['mcp'], null, $body['registration_id']);
+        (new \ReflectionProperty(McpAccessToken::class, 'id'))->setValue($this->token, 5);
+
+        $this->controller(registrations: $registrations)->revoke(5, $this->post('valid'));
+
+        self::assertTrue($this->token->isRevoked());
+        self::assertTrue($store->rows[0]->isRevoked());
+    }
+
+    public function testRevokingAnAgentTokenWithoutAgentRegistrationStillRevokesTheToken(): void
+    {
+        $this->token = new McpAccessToken(hash('sha256', 'y'), 7, 'Agent', ['mcp'], null, 'reg_abc');
+        (new \ReflectionProperty(McpAccessToken::class, 'id'))->setValue($this->token, 5);
+
+        $this->controller()->revoke(5, $this->post('valid'));
+
+        self::assertTrue($this->token->isRevoked());
+    }
+
+    public function testRevokingAnOAuthTokenLeavesRegistrationsAlone(): void
+    {
+        $store = new RegistrationStore();
+        $registrations = new AgentRegistrationManager($store->entityManager($this), new IdentityAssertionSigner('s'));
+        $registrations->register('anonymous', null, null, 'https://shop.example', 'https://shop.example/c', 'https://shop.example/v');
+
+        $this->controller(registrations: $registrations)->revoke(5, $this->post('valid'));
+
+        self::assertFalse($store->rows[0]->isRevoked());
     }
 
     public function testRevokingNeedsAValidCsrfToken(): void
@@ -152,7 +191,7 @@ final class TokenAdminControllerTest extends TestCase
         self::assertTrue($this->token->isRevoked());
     }
 
-    private function controller(bool $csrfValid = true, bool $granted = true, ?int $currentAdminId = 7, ?string $overviewRole = null, bool $ownerExists = true): TokenAdminController
+    private function controller(bool $csrfValid = true, bool $granted = true, ?int $currentAdminId = 7, ?string $overviewRole = null, bool $ownerExists = true, ?AgentRegistrationManager $registrations = null): TokenAdminController
     {
         $tokens = $this->createStub(EntityRepository::class);
         $tokens->method('findBy')->willReturn([$this->token]);
@@ -176,7 +215,7 @@ final class TokenAdminControllerTest extends TestCase
         $admins = $this->createStub(ObjectRepository::class);
         $admins->method('find')->willReturn($ownerExists ? $admin : null);
 
-        $controller = new TokenAdminController(new AccessTokenManager($entityManager), new OAuthServer($entityManager), $admins, new RefreshTokenManager($entityManager), $overviewRole);
+        $controller = new TokenAdminController(new AccessTokenManager($entityManager), new OAuthServer($entityManager), $admins, new RefreshTokenManager($entityManager), $overviewRole, $registrations);
         $controller->setContainer($this->container($csrfValid, $granted, $currentAdminId));
 
         return $controller;

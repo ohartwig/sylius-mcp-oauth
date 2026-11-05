@@ -115,9 +115,26 @@ final class KohSyliusMcpOAuthBundle extends AbstractBundle
                         ->scalarNode('overview_role')->defaultNull()->info('Role that sees and revokes every administrator\'s MCP tokens. null: each administrator manages only their own.')->end()
                     ->end()
                 ->end()
+                ->arrayNode('agent_registration')
+                    ->info('auth.md agent registration (anonymous, service_auth) with an administrator claim ceremony. Needs the bundle migration Version20261105120000.')
+                    ->addDefaultsIfNotSet()
+                    ->children()
+                        ->booleanNode('enabled')->defaultTrue()->info('Off: no identity endpoint, nothing declared in agent_auth but the skill.')->end()
+                        ->integerNode('claim_ttl')->defaultValue(3600)->min(600)->max(86400)->info('Seconds an administrator has to claim a registration.')->end()
+                        ->integerNode('assertion_ttl')->defaultValue(86400)->min(600)->max(2592000)->info('Lifetime in seconds of the post-claim identity assertion, the agent\'s means to mint new access tokens.')->end()
+                    ->end()
+                ->end()
                 ->arrayNode('rate_limits')
                     ->addDefaultsIfNotSet()
                     ->children()
+                        ->arrayNode('identity')
+                            ->info('Agent registrations and claim attempts per client address.')
+                            ->addDefaultsIfNotSet()
+                            ->children()
+                                ->integerNode('limit')->min(0)->defaultValue(10)->info('0 disables the limit.')->end()
+                                ->scalarNode('interval')->defaultValue('1 hour')->end()
+                            ->end()
+                        ->end()
                         ->arrayNode('register')
                             ->addDefaultsIfNotSet()
                             ->children()
@@ -180,6 +197,10 @@ final class KohSyliusMcpOAuthBundle extends AbstractBundle
         $builder->setParameter('koh_mcp_oauth.cors_allowed_origins', array_values($config['cors_allowed_origins'] ?? []));
         $builder->setParameter('koh_mcp_oauth.rate_limits', $config['rate_limits'] ?? []);
         $builder->setParameter('koh_mcp_oauth.admin.menu', (bool) ($config['admin']['menu'] ?? true));
+        // The configuration tree supplies every default.
+        foreach (['enabled', 'claim_ttl', 'assertion_ttl'] as $key) {
+            $builder->setParameter('koh_mcp_oauth.agent_registration.'.$key, $config['agent_registration'][$key]);
+        }
         $builder->setParameter('koh_mcp_oauth.admin.overview_role', $config['admin']['overview_role'] ?? null);
 
         $container->import('../config/services.php');

@@ -85,6 +85,9 @@ The entity mapping and, from 3.0, the bundle's migrations register themselves
 | `/mcp/oauth/revoke` | revocation |
 | `/admin/mcp/authorize` | consent — deliberately under `/admin` |
 | `/admin/mcp/access-tokens` | token overview and revocation in the Sylius admin |
+| `/mcp/oauth/agent/identity` | auth.md `identity_endpoint` (agent registration) |
+| `/mcp/oauth/agent/identity/claim` | auth.md `claim_endpoint` |
+| `/admin/mcp/claim` | auth.md `verification_uri` — an administrator claims an agent here |
 
 `/authorize` sits under `/admin` so the admin firewall covers it: consent
 requires a signed-in administrator. Everything else is public, because a client
@@ -240,19 +243,63 @@ client that compares the issuer against the one it discovered will reject the
 token. The metadata is built from `AgentContext` instead — see
 `koh/sylius-agent-contracts`.
 
-### `identity_types_supported` says `identity_assertion`
+### Agent registration (auth.md)
 
-`delegated_user` is the more literal description, but the Auth.md vocabulary is
-a closed set (`identity_assertion`, `verified_email`, `anonymous`). A value
-outside it makes scanners report *agent_auth metadata was not found* even though
-the block is present and complete. The semantics match anyway — the token
-asserts the identity of the administrator who authorised it.
+The bundle implements the registration profile of
+[auth.md v0.6.0](https://github.com/workos/auth.md) for `anonymous` and
+`service_auth`, and declares exactly that in `agent_auth`:
+`identity_endpoint`, `claim_endpoint`, `identity_types_supported:
+["anonymous", "service_auth"]` and `skill` (`/auth.md`, served by
+`koh/sylius-auth-md`). The token endpoint accepts the claim grant
+(`urn:workos:agent-auth:grant-type:claim`) and the RFC 7523 jwt-bearer grant;
+both are listed in `grant_types_supported`.
+
+What it does **not** do: accept ID-JAGs (`identity_assertion` — no identity
+provider is trusted, so the type is not declared; a request answers
+`issuer_not_enabled`) and receive security events (no `events_endpoint`).
+
+The security model stays *delegated, never autonomous*:
+
+- `pre_claim_scopes` is empty. An unclaimed registration cannot be exchanged
+  for any token (`invalid_scope`), so it never reaches `/_mcp`.
+- Only an administrator signed in to the admin can claim, at `/admin/mcp/claim`
+  (the `verification_uri`), by typing the six-digit code the agent shows. If
+  the agent named an email (`service_auth`, or `email` at the claim endpoint),
+  only that administrator can. Claiming grants `default_scopes`, acting as
+  that administrator.
+- Short windows: the claim window (`claim_ttl`, default 1 hour), the user code
+  (10 minutes, five wrong entries end the attempt), the post-claim assertion
+  (`assertion_ttl`, default 1 day). Claim tokens, attempt tokens and user codes
+  are stored hashed and spent on use; the claim grant hands out its token once.
+- Registration and claim attempts are limited per client address
+  (`rate_limits.identity`, default 10 per hour; set `framework.trusted_proxies`
+  behind an ingress).
+- Revoking an agent's token under `/admin/mcp/access-tokens` also revokes its
+  registration; a disabled administrator's agent gets `invalid_grant`.
+
+The assertion is an HS256 JWT keyed from `kernel.secret`; only this server
+issues and verifies it.
+
+```yaml
+koh_mcp_oauth:
+    agent_registration:
+        enabled: true        # false: no endpoints, agent_auth declares only `skill`
+        claim_ttl: 3600
+        assertion_ttl: 86400
+    rate_limits:
+        identity: { limit: 10, interval: '1 hour' }
+```
+
+It needs the migration `Version20261105120000` (table
+`app_mcp_agent_registration`): run `bin/console doctrine:migrations:migrate`.
+The claim page is `@KohSyliusMcpOAuth/agent/claim.html.twig`, overridable like
+the consent screen.
 
 ### The `agent_auth` block is aggregated, not hard-coded
 
-It is built from every registered `AuthMethodDescriptorInterface`, so a shop that
-also installs `koh/sylius-web-bot-auth` advertises both credential types without
-either bundle knowing the other exists. The same descriptor feeds `/auth.md`, so
+It is built from every registered `AuthMethodDescriptorInterface`, so another
+bundle that accepts a further registration type adds it without either bundle
+knowing the other exists. The same descriptor feeds `/auth.md`, so
 the prose and the machine-readable metadata cannot drift apart.
 
 ## Token overview in the admin

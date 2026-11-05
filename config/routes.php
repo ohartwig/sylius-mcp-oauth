@@ -6,6 +6,8 @@
 declare(strict_types=1);
 
 use Koh\SyliusMcpOAuth\Admin\TokenAdminController;
+use Koh\SyliusMcpOAuth\Controller\AgentClaimController;
+use Koh\SyliusMcpOAuth\Controller\AgentIdentityController;
 use Koh\SyliusMcpOAuth\Controller\AuthorizeController;
 use Koh\SyliusMcpOAuth\Controller\MetadataController;
 use Koh\SyliusMcpOAuth\Controller\RegisterController;
@@ -42,6 +44,21 @@ return static function (RoutingConfigurator $routes): void {
     $routes->add('mcp_oauth_revoke', '/mcp/oauth/revoke')
         ->controller(RevokeController::class)
         ->methods(['POST']);
+
+    // auth.md agent registration: identity_endpoint and claim_endpoint.
+    $routes->add('mcp_oauth_agent_identity', AgentIdentityController::IDENTITY_PATH)
+        ->controller([AgentIdentityController::class, 'identity'])
+        ->methods(['POST']);
+
+    $routes->add('mcp_oauth_agent_identity_claim', AgentIdentityController::CLAIM_PATH)
+        ->controller([AgentIdentityController::class, 'claim'])
+        ->methods(['POST']);
+
+    // The verification_uri of the claim ceremony; under /admin like
+    // /authorize, so only a signed-in administrator can claim.
+    $routes->add('mcp_oauth_agent_claim', AgentIdentityController::VERIFICATION_PATH)
+        ->controller(AgentClaimController::class)
+        ->methods(['GET', 'POST']);
 
     // NOTE: /admin is the default Sylius admin path. If
     // SYLIUS_ADMIN_ROUTING_PATH_NAME is customised, override this route in the

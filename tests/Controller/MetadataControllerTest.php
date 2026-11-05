@@ -76,53 +76,66 @@ final class MetadataControllerTest extends TestCase
         self::assertStringNotContainsString('10.0.6.113', json_encode($metadata, \JSON_THROW_ON_ERROR));
     }
 
-    public function testAgentAuthBlockIsPresent(): void
+    /**
+     * The block uses the auth.md v0.6.0 names (AUTH.md Step 1b) and declares
+     * exactly the registration types the identity endpoint accepts.
+     */
+    public function testAgentAuthDeclaresTheAuthMdRegistrationEndpoints(): void
     {
-        $metadata = $this->decode($this->controller()->authorizationServer(new Request()));
+        $metadata = $this->decode($this->controller([new OAuthAuthMethodDescriptor(agentRegistration: true)])->authorizationServer(new Request()));
 
-        self::assertArrayHasKey('agent_auth', $metadata);
-        self::assertSame(
-            'https://shop.example.com/mcp/oauth/register',
-            $metadata['agent_auth']['register_uri'],
-        );
-        self::assertSame(['oauth2_access_token'], $metadata['agent_auth']['credential_types_supported']);
-        self::assertSame(
-            ['oauth_dynamic_client_registration'],
-            $metadata['agent_auth']['registration_methods_supported'],
-        );
+        self::assertSame([
+            'skill' => 'https://shop.example.com/auth.md',
+            'identity_endpoint' => 'https://shop.example.com/mcp/oauth/agent/identity',
+            'claim_endpoint' => 'https://shop.example.com/mcp/oauth/agent/identity/claim',
+            'identity_types_supported' => ['anonymous', 'service_auth'],
+        ], $metadata['agent_auth']);
     }
 
     /**
-     * The Auth.md vocabulary is a closed set. "delegated_user" is the literal
-     * description but not one of the recognised values, and a scanner then
-     * reports "agent_auth metadata was not found" even though the block is
-     * complete.
+     * Without agent registration there is no identity endpoint, so no
+     * registration type may be declared: an agent would POST to nothing.
+     * `identity_assertion` in particular is never declared — no ID-JAG issuer
+     * is trusted here.
      */
-    public function testIdentityTypeUsesTheRecognisedVocabulary(): void
+    public function testWithoutAgentRegistrationOnlyTheSkillIsDeclared(): void
     {
         $metadata = $this->decode($this->controller()->authorizationServer(new Request()));
 
-        self::assertSame(['identity_assertion'], $metadata['agent_auth']['identity_types_supported']);
+        self::assertSame(['skill' => 'https://shop.example.com/auth.md'], $metadata['agent_auth']);
+    }
+
+    /** The two auth.md grants are advertised with agent registration, and only then. */
+    public function testTheAgentGrantsAreAdvertisedWithAgentRegistration(): void
+    {
+        $controller = new MetadataController($this->contextFactory(), new AuthMethodRegistry([new OAuthAuthMethodDescriptor()]), new AgentJsonResponder(), '/_mcp', true, true);
+
+        self::assertSame([
+            'authorization_code',
+            'refresh_token',
+            'urn:ietf:params:oauth:grant-type:jwt-bearer',
+            'urn:workos:agent-auth:grant-type:claim',
+        ], $this->decode($controller->authorizationServer(new Request()))['grant_types_supported']);
     }
 
     /** A shop with several auth methods must advertise all of them. */
     public function testAgentAuthMergesEveryInstalledMethod(): void
     {
         $controller = $this->controller([
-            new OAuthAuthMethodDescriptor(),
+            new OAuthAuthMethodDescriptor(agentRegistration: true),
             $this->staticDescriptor(new AuthMethodDescriptor(
-                id: 'web-bot-auth',
-                title: 'Web Bot Auth',
+                id: 'id-jag',
+                title: 'ID-JAG',
                 documentation: '',
-                identityTypes: ['anonymous'],
-                credentialTypes: ['http_message_signature'],
+                identityTypes: ['identity_assertion'],
+                assertionTypes: ['urn:ietf:params:oauth:token-type:id-jag'],
             )),
         ]);
 
         $agentAuth = $this->decode($controller->authorizationServer(new Request()))['agent_auth'];
 
-        self::assertSame(['oauth2_access_token', 'http_message_signature'], $agentAuth['credential_types_supported']);
-        self::assertSame(['identity_assertion', 'anonymous'], $agentAuth['identity_types_supported']);
+        self::assertSame(['anonymous', 'service_auth', 'identity_assertion'], $agentAuth['identity_types_supported']);
+        self::assertSame(['urn:ietf:params:oauth:token-type:id-jag'], $agentAuth['identity_assertion']['assertion_types_supported']);
     }
 
     public function testProtectedResourceMetadataPointsAtTheMcpEndpoint(): void
