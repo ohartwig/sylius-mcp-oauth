@@ -1,3 +1,9 @@
+## [3.2.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.1.3...v3.2.0) (2026-11-05)
+
+### :sparkles: Features
+
+* **auth:** implement auth.md v0.6.0 agent registration with an admin claim ([ede0993](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ede09933e0dd6d62dc2754172cea3f7614cc58a9))
+
 ## [3.1.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.1.2...v3.1.3) (2026-11-04)
 
 ### :bug: Fixes
