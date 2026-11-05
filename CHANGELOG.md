@@ -1,3 +1,10 @@
+## [3.2.3](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.2...v3.2.3) (2026-11-05)
+
+### :repeat: Chores
+
+* give every renovate.json package rule the 7 day minimumReleaseAge ([93a249a](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/93a249a307bfc7cb09b36f1093df2f2299ba5f3d))
+* use the 7 day minimumReleaseAge the semgrep rule requires ([260a82b](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/260a82b794f11d0d40e95cae0e583b3b0e0ce4eb))
+
 ## [3.2.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.1...v3.2.2) (2026-11-05)
 
 ### :repeat: Chores
