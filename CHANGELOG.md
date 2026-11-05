@@ -1,3 +1,9 @@
+## [3.2.2](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.1...v3.2.2) (2026-11-05)
+
+### :repeat: Chores
+
+* satisfy the markdown lint and semgrep gates ([4b151b8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/4b151b8be339684da93fe7d82cb1f4b5540d6fb8))
+
 ## [3.2.1](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.0...v3.2.1) (2026-11-05)
 
 ### :bug: Fixes
