@@ -18,7 +18,8 @@
       "matchPackageNames": [
         "sylius/sylius"
       ],
-      "rangeStrategy": "widen"
+      "rangeStrategy": "widen",
+      "minimumReleaseAge": "7 days"
     }
   ]
 }
