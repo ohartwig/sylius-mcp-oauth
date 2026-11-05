@@ -46,12 +46,12 @@
         "symfony/security-bundle": "^7.4 || ^8.0",
         "symfony/security-core": "^7.4 || ^8.0",
         "symfony/security-http": "^7.4 || ^8.0",
-        "symfony/translation-contracts": "^3.7.1"
+        "symfony/translation-contracts": "^3.8.1"
     },
     "require-dev": {
         "koh/dev-sylius": "^1.0",
         "phpstan/extension-installer": "^1.4.3",
-        "phpstan/phpstan": "^2.3.4",
+        "phpstan/phpstan": "^2.3.5",
         "phpstan/phpstan-doctrine": "^2.1.0",
         "phpunit/phpunit": "^11.5.57"
     },
