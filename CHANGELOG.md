@@ -1,3 +1,9 @@
+## [3.2.5](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.4...v3.2.5) (2026-11-13)
+
+### :bug: Fixes
+
+* **deps:** update dependency doctrine/doctrine-bundle to ^2.19.4 ([b423685](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/b423685e318c839d9c9f34338717ddabc6dfcde7))
+
 ## [3.2.4](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.3...v3.2.4) (2026-11-08)
 
 ### :repeat: Chores
