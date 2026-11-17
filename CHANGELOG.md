@@ -1,3 +1,9 @@
+## [3.2.8](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.7...v3.2.8) (2026-11-17)
+
+### :bug: Fixes
+
+* **composer:** point homepage at the package page ([85f0e0f](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/85f0e0f64643668c63c22fbc1d44717c3d264647))
+
 ## [3.2.7](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.6...v3.2.7) (2026-11-17)
 
 ### :repeat: Chores
