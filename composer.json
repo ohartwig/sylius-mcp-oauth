@@ -51,7 +51,7 @@
     "require-dev": {
         "koh/dev-sylius": "^1.0",
         "phpstan/extension-installer": "^1.4.3",
-        "phpstan/phpstan": "^2.3.5",
+        "phpstan/phpstan": "^2.3.6",
         "phpstan/phpstan-doctrine": "^2.1.2",
         "phpunit/phpunit": "^11.5.58"
     },
