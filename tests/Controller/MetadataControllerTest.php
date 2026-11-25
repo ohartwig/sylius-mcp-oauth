@@ -148,6 +148,48 @@ final class MetadataControllerTest extends TestCase
         self::assertSame('https://shop.example.com/auth.md', $metadata['resource_documentation']);
     }
 
+    /** RFC 9728 §3.1: the resource path inserted after the well-known prefix. */
+    public function testThePathInsertedLocationServesTheSameDocument(): void
+    {
+        $atPath = $this->controller()->protectedResourceAtPath(new Request(), '_mcp');
+
+        self::assertSame(
+            $this->decode($this->controller()->protectedResource(new Request())),
+            $this->decode($atPath),
+        );
+        self::assertSame('https://shop.example.com/_mcp', $this->decode($atPath)['resource']);
+    }
+
+    /**
+     * A storefront page is not a protected resource. Answering for it would
+     * publish metadata whose `resource` disagrees with the URL it was fetched
+     * from — a claim RFC 9728 §3.3 tells clients to reject.
+     *
+     * @return iterable<string, array{string}>
+     */
+    public static function otherPaths(): iterable
+    {
+        yield 'shop locale root' => ['de_DE/'];
+        yield 'shop locale' => ['de_DE'];
+        yield 'below the resource' => ['_mcp/tools'];
+        yield 'prefix of the resource' => ['_mc'];
+    }
+
+    #[\PHPUnit\Framework\Attributes\DataProvider('otherPaths')]
+    public function testAnyOtherPathIsNotFound(string $resource): void
+    {
+        $this->expectException(\Symfony\Component\HttpKernel\Exception\NotFoundHttpException::class);
+
+        $this->controller()->protectedResourceAtPath(new Request(), $resource);
+    }
+
+    public function testThePathInsertedLocationFollowsAConfiguredResourcePath(): void
+    {
+        $controller = new MetadataController($this->contextFactory(), new AuthMethodRegistry([new OAuthAuthMethodDescriptor()]), new AgentJsonResponder(), '/mcp');
+
+        self::assertSame('https://shop.example.com/mcp', $this->decode($controller->protectedResourceAtPath(new Request(), 'mcp'))['resource']);
+    }
+
     public function testDiscoveryIsReadableCrossOrigin(): void
     {
         $response = $this->controller()->authorizationServer(new Request());

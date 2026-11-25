@@ -33,6 +33,16 @@ return static function (RoutingConfigurator $routes): void {
         ->controller([MetadataController::class, 'protectedResource'])
         ->methods(['GET', 'HEAD']);
 
+    // RFC 9728 §3.1: a client that knows the resource URL inserts its path
+    // after the well-known prefix, so /_mcp is described at
+    // /.well-known/oauth-protected-resource/_mcp. The suffix is matched
+    // generically and checked against resource_path in the controller; any
+    // other path is 404, because the shop pages are not a protected resource.
+    $routes->add('mcp_oauth_metadata_protected_resource_path', '/.well-known/oauth-protected-resource/{resource}')
+        ->controller([MetadataController::class, 'protectedResourceAtPath'])
+        ->requirements(['resource' => '.+'])
+        ->methods(['GET', 'HEAD']);
+
     $routes->add('mcp_oauth_register', '/mcp/oauth/register')
         ->controller(RegisterController::class)
         ->methods(['POST']);

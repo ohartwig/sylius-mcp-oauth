@@ -80,6 +80,7 @@ The entity mapping and, from 3.0, the bundle's migrations register themselves
 |---|---|
 | `/.well-known/oauth-authorization-server` | RFC 8414 metadata, incl. `agent_auth` |
 | `/.well-known/oauth-protected-resource` | RFC 9728 metadata |
+| `/.well-known/oauth-protected-resource/_mcp` | the same document at the RFC 9728 §3.1 path-inserted location of `resource_path`; any other suffix is 404 |
 | `/mcp/oauth/register` | RFC 7591 dynamic client registration |
 | `/mcp/oauth/token` | token exchange |
 | `/mcp/oauth/revoke` | revocation |

@@ -13,11 +13,13 @@ use Koh\SyliusAgentContracts\Registry\AuthMethodRegistry;
 use Koh\SyliusMcpOAuth\OAuth\OAuthServer;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * OAuth discovery documents, fetched unauthenticated by MCP clients:
  *  - RFC 8414 Authorization Server Metadata (/.well-known/oauth-authorization-server)
- *  - RFC 9728 Protected Resource Metadata (/.well-known/oauth-protected-resource)
+ *  - RFC 9728 Protected Resource Metadata (/.well-known/oauth-protected-resource,
+ *    and path-inserted at /.well-known/oauth-protected-resource/_mcp)
  *
  * URLs come from the AgentContext rather than the request. TLS commonly
  * terminates at an ingress, and without framework.trusted_proxies the request
@@ -79,6 +81,25 @@ final class MetadataController
         }
 
         return $types;
+    }
+
+    /**
+     * The path-inserted location of RFC 9728 §3.1, for the one resource this
+     * server guards.
+     *
+     * Only the configured resource path answers. Anything else is a 404 rather
+     * than a fallback to the same document: metadata served under
+     * /.well-known/oauth-protected-resource/de_DE/ would claim, per §3.3, that
+     * the storefront page is a protected resource, and a client validating the
+     * `resource` member against the URL it asked for rejects it anyway.
+     */
+    public function protectedResourceAtPath(Request $request, string $resource): Response
+    {
+        if ('/'.ltrim($resource, '/') !== '/'.ltrim($this->resourcePath, '/')) {
+            throw new NotFoundHttpException('No protected resource is described at this path.');
+        }
+
+        return $this->protectedResource($request);
     }
 
     public function protectedResource(Request $request): Response
