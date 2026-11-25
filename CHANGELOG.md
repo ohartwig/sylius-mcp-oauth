@@ -1,3 +1,9 @@
+## [3.3.0](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.9...v3.3.0) (2026-11-25)
+
+### :sparkles: Features
+
+* serve RFC 9728 metadata at the path-inserted location ([ff424ff](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/commit/ff424ff21e57f8436b9d25eab9ae29bd4372bbb6))
+
 ## [3.2.9](https://git.ole-hartwig.eu/ai-ready-platform/platform/sylius-mcp-oauth/compare/v3.2.8...v3.2.9) (2026-11-20)
 
 ### :repeat: Chores
